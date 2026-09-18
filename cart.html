@@ -1,0 +1,80 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Корзина — Nexora</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="header">
+    <div class="container header-content">
+        <a href="index.html" class="logo">nexora</a>
+
+        <nav>
+            <a href="index.html">Главная</a>
+            <a href="catalog.html">Каталог</a>
+            <a href="orders.html">Заказы</a>
+            <a href="admin.html">Админ</a>
+        </nav>
+
+        <a href="cart.html" class="cart-link">
+            Корзина <span id="cartCount">0</span>
+        </a>
+    </div>
+</header>
+
+<main class="container page">
+
+    <div class="page-header">
+        <h1>Корзина</h1>
+        <p>Товары, которые вы выбрали</p>
+    </div>
+
+    <div class="cart-layout">
+
+        <div id="cartItems"></div>
+
+        <div class="cart-summary">
+            <h2>Ваш заказ</h2>
+
+            <div class="summary-row">
+                <span>Товары</span>
+                <strong id="cartTotal">0 ₸</strong>
+            </div>
+
+            <div class="summary-row">
+                <span>Доставка</span>
+                <strong>Бесплатно</strong>
+            </div>
+
+            <hr>
+
+            <div class="summary-row total">
+                <span>Итого</span>
+                <strong id="cartFinalTotal">0 ₸</strong>
+            </div>
+
+            <button id="orderButton" class="button full">
+                Оформить заказ
+            </button>
+        </div>
+
+    </div>
+
+</main>
+
+<footer class="footer">
+    <div class="container">
+        <strong>nexora</strong>
+        <p>Магазин бытовой техники</p>
+    </div>
+</footer>
+
+<script src="js/data.js"></script>
+<script src="js/app.js"></script>
+<script src="js/cart.js"></script>
+
+</body>
+</html>
