@@ -10,9 +10,12 @@ function Header() {
         </a>
 
         <nav className="header__nav">
-          <a href="/">Home</a>
-          <a href="/catalog">Catalog</a>
-          <a href="/about">About</a>
+          <a href="/catalog" className="header__catalog-link">
+            Catalog
+          </a>
+          <a href="/searchbar" className="header__searchbar-link">
+            Searchbar
+          </a>
         </nav>
 
         <div className="header__actions">
@@ -20,9 +23,9 @@ function Header() {
             🔍
           </button>
 
-          <button className="header__account" aria-label="Account">
+         {/*  <button className="header__account" aria-label="Account">
             👤
-          </button>
+          </button> */}
 
           <button className="header__cart" aria-label="Cart">
             🛒
