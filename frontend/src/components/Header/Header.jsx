@@ -2,38 +2,79 @@ import './Header.css';
 
 function Header() {
   return (
-    <header className="header">
-      <div className="header__container">
+    <nav className="navbar navbar-expand-lg bg-body-tertiary">
+      <div className="container-fluid header__container">
 
-        <a href="/" className="header__logo">
+        <a className="navbar-brand" href="/">
           NEXORA
         </a>
 
-        <nav className="header__nav">
-          <a href="/catalog" className="header__catalog-link">
-            Catalog
-          </a>
-          <a href="/searchbar" className="header__searchbar-link">
-            Searchbar
-          </a>
-        </nav>
+        <button
+          className="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarContent"
+          aria-controls="navbarContent"
+          aria-expanded="false"
+          aria-label="Toggle navigation"
+        >
+          <span className="navbar-toggler-icon"></span>
+        </button>
 
-        <div className="header__actions">
-          <button className="header__search" aria-label="Search">
-            🔍
+        <div
+          className="collapse navbar-collapse"
+          id="navbarContent"
+        >
+          <ul className="navbar-nav me-auto mb-2 mb-lg-0">
+
+            {/* <li className="nav-item">
+              <a className="nav-link active" href="/">
+                Главная
+              </a>
+            </li> */}
+
+            <li className="nav-item">
+              <a className="nav-link" href="/catalog">
+                Каталог
+              </a>
+            </li>
+
+          </ul>
+
+          <form className="d-flex header__searchbar" role="search">
+            <input
+              className="form-control me-2"
+              type="search"
+              placeholder="Я хочу найти..."
+              aria-label="Search"
+            />
+
+            <button
+              className="btn btn-outline-success"
+              type="submit"
+            >
+              Поиск
+            </button>
+          </form>
+
+          <div className="header__actions">
+
+            <button className="btn ms-3" type="button">
+            <img src="src/assets/headerimgs/icons8-сердце-48.png" alt="Cart" />
+            </button>
+
+          <button className="btn ms-3" type="button">
+            <img src="src/assets/headerimgs/icons8-корзина-32.png" alt="Cart" />
           </button>
 
-         {/*  <button className="header__account" aria-label="Account">
-            👤
-          </button> */}
-
-          <button className="header__cart" aria-label="Cart">
-            🛒
+          <button className="btn ms-3" type="button">
+            <img src="src/assets/headerimgs/icons8-пользователь-48.png" alt="Cart" />
           </button>
+          </div>
+
         </div>
-
       </div>
-    </header>
+    </nav>
   );
 }
 
