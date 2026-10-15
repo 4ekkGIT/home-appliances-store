@@ -4,14 +4,15 @@ import iphone18pro from '../../assets/homeimgs/iphone18pro.png';
 import applewatch from '../../assets/homeimgs/applewatch.png';
 import samsungtv from '../../assets/homeimgs/samsungtv.png';
 import airpods5 from '../../assets/homeimgs/airpods5.png';
+import asuslaptop from '../../assets/homeimgs/asuslaptop.png';
 
 const categories = [
-  'Refrigerators',
-  'Washing Machines',
-  'Vacuum Cleaners',
-  'Televisions',
-  'Kitchen Appliances',
-  'Air Conditioners',
+  'Лучшие цены',
+  'Популярные',
+  'Смартфоны',
+  'Ноутбуки и компьютеры',
+  'Холодильники и морозильники',
+  'Стиральные машины',
 ];
 
 function Home() {
@@ -25,6 +26,7 @@ function Home() {
             id="carouselExampleAutoplaying"
             className="carousel slide"
             data-bs-ride="carousel"
+            data-bs-interval="5000"
           >
 
             <div className="carousel-inner">
@@ -56,6 +58,14 @@ function Home() {
               <div className="carousel-item">
                 <img
                   src={airpods5}
+                  className="d-block w-100"
+                  alt="Featured home appliances"
+                />
+              </div>
+
+              <div className="carousel-item">
+                <img
+                  src={asuslaptop}
                   className="d-block w-100"
                   alt="Featured home appliances"
                 />
@@ -99,7 +109,17 @@ function Home() {
       </section>
 
       <section className="categories">
-
+        <div className="categories__content">
+          <ul className="categories__list">
+            {categories.map((category) => (
+              <li key={category} className="categories__item">
+                <button className="categories__button" type="button">
+                  {category}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </div>
 
 
       </section>
