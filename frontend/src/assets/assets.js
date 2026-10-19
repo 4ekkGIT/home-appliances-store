@@ -7,6 +7,7 @@ import dropdownicon from '../assets/dropdownicon.png';
 import slide1 from '../assets/slide1.png';
 import slide2 from '../assets/slide2.png';
 import slide3 from '../assets/slide3.png';
+import favourite from '../assets/favouriteicon.png';
 
 export const assets = {
     nexoraLogo,
@@ -17,7 +18,8 @@ export const assets = {
     dropdownicon,
     slide1,
     slide2,
-    slide3
+    slide3,
+    favourite
 }
 
 export const products = [
