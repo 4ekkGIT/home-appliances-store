@@ -32,7 +32,7 @@ const Navbar = () => {
     <header className="relative z-20 w-full border-b border-gray-200 bg-white">
       <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center justify-between gap-y-4 px-4 py-4 sm:flex-nowrap sm:gap-y-0 sm:px-6 lg:px-8">
         <Link to="/" className="order-1 shrink-0">
-          <img src={assets.nexoraLogo} alt="Nexora" className="w-32 transition-transform duration-200 hover:scale-105 sm:w-36" />
+          <img src={assets.nexoraLogo} alt="Nexora" className="w-32 cursor-pointer transition-transform duration-200 hover:scale-105 sm:w-36" />
         </Link>
 
         <form onSubmit={handleSearch} className="order-3 w-full sm:order-2 sm:mx-6 sm:max-w-xl sm:flex-1">
@@ -42,7 +42,7 @@ const Navbar = () => {
               <path strokeLinecap="round" d="m16 16 4 4" />
             </svg>
             <input type="search" name="search" placeholder="Search products..." aria-label="Search products" className="w-full rounded-lg border border-gray-300 bg-gray-50 py-3 pl-10 pr-20 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:bg-white" />
-            <button type="submit" className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md bg-black px-3 py-2 text-xs font-medium text-white transition hover:bg-gray-700">
+            <button type="submit" className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md bg-black px-3 py-2 text-xs font-medium text-white transition hover:bg-gray-700 cursor-pointer">
               Search
             </button>
           </div>

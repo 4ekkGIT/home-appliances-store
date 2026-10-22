@@ -20,7 +20,18 @@ import tvsCategory from '../assets/tvscategory.webp';
 import vacuumCleanerCategory from '../assets/vacuumcleanercategory.webp';
 import washingMachineCategory from '../assets/washingmashinecategory.webp';
 import waterHeatersCategory from '../assets/waterheaterscategory.webp';
-import iphoneduohero from '../assets/iphoneduohero.webp';
+import airfryer from '../assets/airfryer.webp';
+import airfryer2 from '../assets/airfryer2.webp';
+import airfryer3 from '../assets/airfryer3.webp';
+import airfryer4 from '../assets/airfryer4.webp';
+import AsusLaptop from '../assets/AsusLaptop1.webp';
+import AsusLaptop2 from '../assets/AsusLaptop2.webp';
+import AsusLaptop3 from '../assets/AsusLaptop3.webp';
+import LenovoLaptop1 from '../assets/LenovoLaptop1.webp';
+import LenovoLaptop2 from '../assets/LenovoLaptop2.webp';
+import LenovoLaptop3 from '../assets/LenovoLaptop3.webp';
+import TefalIron from '../assets/TefalIron.webp'
+import iphoneduoheroeng from '../assets/iphoneduoheroeng.png'
 
 export const assets = {
     nexoraLogo,
@@ -45,17 +56,61 @@ export const assets = {
     vacuumCleanerCategory,
     washingMachineCategory,
     waterHeatersCategory,
-    iphoneduohero
+    airfryer,
+    airfryer2,
+    airfryer3,
+    airfryer4,
+    AsusLaptop,
+    AsusLaptop2,
+    AsusLaptop3,
+    LenovoLaptop1,
+    LenovoLaptop2,
+    LenovoLaptop3,
+    TefalIron,
+    iphoneduoheroeng
 }
 
 export const products = [
     {
-        _id: "aaaa",
-        name: "Product 1",
+        _id: "0",
+        name: "Nutribullet Air Fryer",
         description: "This is the description for Product 1.",
-        price: 19.99,
-        image: [],
-        category: "Category 1",
+        price: 99.99,
+        image: [airfryer, airfryer2, airfryer3, airfryer4],
+        category: "Cooking",
+        subCategory: "Subcategory 1",
+        date: "2023-06-01T12:00:00Z",
+        bestSeller: false
+    },
+    {
+        _id: "1",
+        name: "ASUS VivoBook 15",
+        description: "This is the description for Product 2.",
+        price: 519.99,
+        image: [AsusLaptop, AsusLaptop2, AsusLaptop3],
+        category: "Laptop",
+        subCategory: "Subcategory 1",
+        date: "2023-06-01T12:00:00Z",
+        bestSeller: true
+    },
+    {
+        _id: "2",
+        name: "LENOVO IdeaPad Slim 3",
+        description: "This is a description for product 3",
+        price: 499.99,
+        image: [LenovoLaptop1, LenovoLaptop2, LenovoLaptop3],
+        category: "Laptop",
+        subCategory: "Subcategory 1",
+        date: "2023-06-01T12:00:00Z",
+        bestSeller: true
+    },
+    {
+        _id: "3",
+        name: "TEFAL GV 9821 E0",
+        description: "This is a description for product 3",
+        price: 499.99,
+        image: [TefalIron],
+        category: "Laptop",
         subCategory: "Subcategory 1",
         date: "2023-06-01T12:00:00Z",
         bestSeller: true

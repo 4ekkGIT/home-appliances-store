@@ -1,66 +1,66 @@
-import { assets } from "../assets/assets"
+import { Link } from 'react-router-dom'
+import { assets } from '../assets/assets.js'
+
+const categories = [
+  { name: 'Special offers', image: assets.cheapDealsCategory },
+  { name: 'Smartphones', image: assets.smartphoneCategory },
+  { name: 'Headphones', image: assets.headphonesCategory },
+  { name: 'Laptops', image: assets.laptopsCategory },
+  { name: 'Televisions', image: assets.tvsCategory },
+  { name: 'Refrigerators', image: assets.fridgesCategory },
+  { name: 'Washing machines', image: assets.washingMachineCategory },
+  { name: 'Vacuum cleaners', image: assets.vacuumCleanerCategory },
+  { name: 'Heaters', image: assets.heaterCategory },
+  { name: 'Water heaters', image: assets.waterHeatersCategory },
+]
 
 const PopularCategories = () => {
   return (
-    <section className="w-full flex justify-center mt-4">
-
-      <div className="w-full px-4 md:px-6 2xl:px-10 max-w-360">
-
-        <div className="flex justify-between items-center">
-          <h2 className="text-2xl sm:text-3xl md:text-[40px] text-gray-800 font-roboto-condensed font-semibold">Bestsellers</h2>
-          <a href="/catalog" className="text-sm sm:text-base md:text-lg text-gray-600 hover:text-gray-800 transition-colors">View All</a>
+    <section aria-labelledby="popular-categories-heading" className="my-10 sm:my-14">
+      <div className="mb-5 flex items-end justify-between gap-4">
+        <div>
+          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-gray-500">
+            Find what you need
+          </p>
+          <h2
+            id="popular-categories-heading"
+            className="mt-1 text-2xl font-semibold text-gray-900 sm:text-3xl"
+          >
+            Popular categories
+          </h2>
         </div>
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 mt-4 gap-3 sm:gap-4 md:gap-6">
-          <div className="flex flex-col bg-white rounded-lg items-center justify-center gap-2 p-2 sm:p-4 hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-            <img src={assets.cheapDealsCategory} alt="Cheap Deals" className="w-full max-w-[120px] aspect-square object-contain" />
-            <h3 className="text-gray-800 font-semibold text-xs sm:text-sm md:text-base text-center">Cheap Deals</h3>
-          </div>
-          <div className="flex flex-col bg-white rounded-lg items-center justify-center gap-2 p-2 sm:p-4 hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-            <img src={assets.iphone18CategoryImg} alt="Apple phones" className="w-full max-w-[120px] aspect-square object-contain" />
-            <h3 className="text-gray-800 font-semibold text-xs sm:text-sm md:text-base text-center">Apple phones</h3>
-          </div>
-          <div className="flex flex-col bg-white rounded-lg items-center justify-center gap-2 p-2 sm:p-4 hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-            <img src={assets.smartphoneCategory} alt="Smartphones" className="w-full max-w-[120px] aspect-square object-contain" />
-            <h3 className="text-gray-800 font-semibold text-xs sm:text-sm md:text-base text-center">Smartphones</h3>
-          </div>
-          <div className="flex flex-col bg-white rounded-lg items-center justify-center gap-2 p-2 sm:p-4 hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-            <img src={assets.headphonesCategory} alt="Headphones" className="w-full max-w-[120px] aspect-square object-contain" />
-            <h3 className="text-gray-800 font-semibold text-xs sm:text-sm md:text-base text-center">Headphones</h3>
-          </div>
-          <div className="flex flex-col bg-white rounded-lg items-center justify-center gap-2 p-2 sm:p-4 hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-            <img src={assets.heaterCategory} alt="Heaters" className="w-full max-w-[120px] aspect-square object-contain" />
-            <h3 className="text-gray-800 font-semibold text-xs sm:text-sm md:text-base text-center">Heaters</h3>
-          </div>
-          <div className="flex flex-col bg-white rounded-lg items-center justify-center gap-2 p-2 sm:p-4 hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-            <img src={assets.vacuumCleanerCategory} alt="Vacuum Cleaners" className="w-full max-w-[120px] aspect-square object-contain" />
-            <h3 className="text-gray-800 font-semibold text-xs sm:text-sm md:text-base text-center">Vacuum Cleaners</h3>
-          </div>
-          <div className="flex flex-col bg-white rounded-lg items-center justify-center gap-2 p-2 sm:p-4 hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-            <img src={assets.washingMachineCategory} alt="Washing Machines" className="w-full max-w-[120px] aspect-square object-contain" />
-            <h3 className="text-gray-800 font-semibold text-xs sm:text-sm md:text-base text-center">Washing Machines</h3>
-          </div>
-          <div className="flex flex-col bg-white rounded-lg items-center justify-center gap-2 p-2 sm:p-4 hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-            <img src={assets.tvsCategory} alt="TVs" className="w-full max-w-[120px] aspect-square object-contain" />
-            <h3 className="text-gray-800 font-semibold text-xs sm:text-sm md:text-base text-center">TVs</h3>
-          </div>
-          <div className="flex flex-col bg-white rounded-lg items-center justify-center gap-2 p-2 sm:p-4 hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-            <img src={assets.laptopsCategory} alt="Laptops" className="w-full max-w-[120px] aspect-square object-contain" />
-            <h3 className="text-gray-800 font-semibold text-xs sm:text-sm md:text-base text-center">Laptops</h3>
-          </div>
-          <div className="flex flex-col bg-white rounded-lg items-center justify-center gap-2 p-2 sm:p-4 hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-            <img src={assets.fridgesCategory} alt="Fridges" className="w-full max-w-[120px] aspect-square object-contain" />
-            <h3 className="text-gray-800 font-semibold text-xs sm:text-sm md:text-base text-center">Fridges</h3>
-          </div>
-          <div className="flex flex-col bg-white rounded-lg items-center justify-center gap-2 p-2 sm:p-4 hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-            <img src={assets.waterHeatersCategory} alt="Water Heaters" className="w-full max-w-[120px] aspect-square object-contain" />
-            <h3 className="text-gray-800 font-semibold text-xs sm:text-sm md:text-base text-center">Water Heaters</h3>
-          </div>
-          <div className="flex flex-col bg-white rounded-lg items-center justify-center gap-2 p-2 sm:p-4 hover:shadow-lg transition-shadow duration-300 cursor-pointer">
-            <img src={assets.promotionImg} alt="Cheap Deals" className="w-full max-w-[120px] aspect-square object-contain" />
-            <h3 className="text-gray-800 font-semibold text-xs sm:text-sm md:text-base text-center">Cheap Deals</h3>
-          </div>
-        </div>
+        <Link
+          to="/catalog"
+          className="shrink-0 text-sm font-medium text-gray-600 transition-colors hover:text-gray-950"
+        >
+          View all
+          <span aria-hidden="true" className="ml-1">
+            →
+          </span>
+        </Link>
       </div>
+
+      <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
+        {categories.map((category) => (
+          <li key={category.name}>
+            <Link
+              to="/catalog"
+              aria-label={`Browse ${category.name}`}
+              className="group flex h-full min-h-36 items-center justify-between overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-gray-300 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800 sm:min-h-44 sm:px-5"
+            >
+              <span className="max-w-24 text-sm font-semibold leading-snug text-gray-800 transition-colors group-hover:text-black sm:text-base">
+                {category.name}
+              </span>
+              <img
+                src={category.image}
+                alt=""
+                loading="lazy"
+                className="h-24 w-24 shrink-0 object-contain transition-transform duration-300 group-hover:scale-105 sm:h-32 sm:w-32"
+              />
+            </Link>
+          </li>
+        ))}
+      </ul>
     </section>
   )
 }
