@@ -1,90 +1,113 @@
-import React from 'react'
-import { assets } from '../assets/assets.js'
+import React, { useState } from 'react'
 import { Link, NavLink } from 'react-router-dom'
+import { assets } from '../assets/assets.js'
+
+const links = [
+  { to: '/', label: 'HOME', end: true },
+  { to: '/catalog', label: 'CATALOG' },
+  { to: '/about', label: 'ABOUT' },
+  { to: '/contact', label: 'CONTACT' },
+]
+
+const navLinkClass = ({ isActive }) =>
+  `flex flex-col items-center gap-1 transition-colors hover:text-black ${
+    isActive ? 'text-black' : 'text-gray-600'
+  }`
+
+const mobileLinkClass = ({ isActive }) =>
+  `border-b border-gray-200 py-5 pl-4 transition-colors hover:bg-gray-100 ${
+    isActive ? 'font-semibold text-black' : 'text-gray-600'
+  }`
 
 const Navbar = () => {
+  const [visible, setVisible] = useState(false)
 
-    const [visible, setVisible] = React.useState(false);
+  const handleSearch = (e) => {
+    e.preventDefault()
+    const query = e.currentTarget.elements.search.value.trim()
+    if (query) window.location.href = `/searchbar?query=${encodeURIComponent(query)}`
+  }
 
   return (
-    <div className='relative z-20 flex flex-wrap items-center justify-between gap-y-4 py-5 font-medium sm:flex-nowrap sm:gap-y-0'>
-      
-      <img src={assets.nexoraLogo} alt="logo" className='order-1 w-36'/>
-
-
-      <form className='border border-gray-700 rounded order-3 w-full max-w-md sm:order-2 sm:mx-6 sm:flex-1'>
-          <label htmlFor="search" className="block mb-2.5 text-sm font-medium text-heading sr-only ">Search</label>
-          <div className="relative">
-              <div className="absolute inset-y-0 start-0 flex items-center ps-3 pointer-events-none">
-                  <svg className="w-4 h-4 text-body" aria-hidden="true" xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24"><path stroke="currentColor" stroke-linecap="round" stroke-width="2" d="m21 21-3.5-3.5M17 10a7 7 0 1 1-14 0 7 7 0 0 1 14 0Z"/></svg>
-              </div>
-              <input type="search" id="search" className="block w-full p-3 ps-9 bg-neutral-secondary-medium border border-default-medium text-heading text-sm rounded-base focus:ring-brand focus:border-brand shadow-xs placeholder:text-body" placeholder="Search" required />
-              <button type="button" className="absolute end-1.5 bottom-1.5 text-white bg-brand hover:bg-brand-strong box-border border border-transparent focus:ring-4 focus:ring-brand-medium shadow-xs font-medium leading-5 rounded text-xs px-3 py-1.5 focus:outline-none">Search</button>
-          </div>
-      </form>
-
-
-      <ul className='hidden sm:order-3 sm:flex gap-5 text-sm text-gray-600 hover:cursor-pointer'>
-        <NavLink className='flex flex-col items-center gap-1' to='/'>
-          <p>HOME</p>
-          <hr className='w-2/4 border-none h-[1.5px] bg-gray-800 hidden'/>
-        </NavLink>
-
-        <NavLink className='flex flex-col items-center gap-1' to='/catalog'>
-          <p>CATALOG</p>
-          <hr className='w-2/4 border-none h-[1.5px] bg-gray-800 hidden'/>
-        </NavLink>
-
-        <NavLink className='flex flex-col items-center gap-1' to='/about'>
-          <p>ABOUT</p>
-          <hr className='w-2/4 border-none h-[1.5px] bg-gray-800 hidden'/>
-        </NavLink>
-
-        <NavLink className='flex flex-col items-center gap-1' to='/contact'>
-          <p>CONTACT</p>
-          <hr className='w-2/4 border-none h-[1.5px] bg-gray-800 hidden'/>
-        </NavLink>
-      </ul>
-
-      <div className='order-2 flex items-center gap-5 sm:order-4'>
-        <img src={assets.favourite} alt="favourite" className='w-5 hover:cursor-pointer'/>
-
-        <div className='group relative'>
-          <img className='w-5 cursor-pointer' src={assets.usericon} alt="user" />
-          <div className='group-hover:block hidden absolute dropdown-menu right-0 z-50 pt-4'>
-            <div className='flex flex-col gap-2 w-36 py-3 px-5 bg-slate-100 text-gray-500 rounded'>
-                <p className='cursor-pointer hover:text-black'>My Profile</p>
-                <NavLink className='cursor-pointer hover:text-black' to='/orders'>
-                  Orders
-                </NavLink>
-                <p className='cursor-pointer hover:text-black'>Wishlist</p>
-                <p className='cursor-pointer hover:text-black'>Logout</p>
-            </div>
-          </div>
-        </div>
-
-        <Link to='/cart' className='relative'>
-          <img src={assets.carticon} alt="cart" className='w-5 min-w-5 hover:cursor-pointer'/>
-          <p className='absolute right-[-5px] bottom-[-5px] w-4 text-center leading-4 bg-black text-white aspect-square rounded-full text-[8px]'>10</p>
+    <header className="relative z-20 w-full border-b border-gray-200 bg-white">
+      <div className="mx-auto flex w-full max-w-[1440px] flex-wrap items-center justify-between gap-y-4 px-4 py-4 sm:flex-nowrap sm:gap-y-0 sm:px-6 lg:px-8">
+        <Link to="/" className="order-1 shrink-0">
+          <img src={assets.nexoraLogo} alt="Nexora" className="w-32 transition-transform duration-200 hover:scale-105 sm:w-36" />
         </Link>
 
-        <img src={assets.menuicon} onClick={() => setVisible(true)} alt="menu" className='w-5 cursor-pointer sm:hidden'/>
+        <form onSubmit={handleSearch} className="order-3 w-full sm:order-2 sm:mx-6 sm:max-w-xl sm:flex-1">
+          <div className="relative">
+            <svg className="pointer-events-none absolute left-3 top-1/2 h-5 w-5 -translate-y-1/2 text-gray-500" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="1.5">
+              <circle cx="11" cy="11" r="7" />
+              <path strokeLinecap="round" d="m16 16 4 4" />
+            </svg>
+            <input type="search" name="search" placeholder="Search products..." aria-label="Search products" className="w-full rounded-lg border border-gray-300 bg-gray-50 py-3 pl-10 pr-20 text-sm text-gray-900 outline-none transition focus:border-gray-500 focus:bg-white" />
+            <button type="submit" className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-md bg-black px-3 py-2 text-xs font-medium text-white transition hover:bg-gray-700">
+              Search
+            </button>
+          </div>
+        </form>
+
+        <nav className="order-3 hidden shrink-0 sm:block">
+          <ul className="flex items-center gap-5 text-sm font-medium">
+            {links.map(({ to, label, end }) => (
+              <li key={to}>
+                <NavLink to={to} end={end} className={navLinkClass}>
+                  {label}
+                  <span className="h-0.5 w-full" />
+                </NavLink>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        <div className="order-2 ml-auto flex shrink-0 items-center gap-4 sm:order-4 sm:ml-5 sm:gap-5">
+          <Link to="/wishlist" aria-label="Wishlist">
+            <img src={assets.favourite} alt="" className="w-5 transition-transform hover:scale-110" />
+          </Link>
+
+          <div className="group relative">
+            <button type="button" aria-label="User account" className="flex items-center">
+              <img src={assets.usericon} alt="" className="w-5 transition-transform hover:scale-110" />
+            </button>
+            <div className="invisible absolute right-0 top-full z-50 w-40 pt-3 opacity-0 transition-all group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
+              <div className="flex flex-col gap-2 rounded-lg bg-white px-5 py-4 text-sm text-gray-600 shadow-lg ring-1 ring-gray-100">
+                <Link to="/profile" className="hover:text-black">My Profile</Link>
+                <Link to="/orders" className="hover:text-black">Orders</Link>
+                <Link to="/wishlist" className="hover:text-black">Wishlist</Link>
+              </div>
+            </div>
+          </div>
+
+          <Link to="/cart" aria-label="Shopping cart" className="relative">
+            <img src={assets.carticon} alt="" className="w-5 min-w-5 transition-transform hover:scale-110" />
+            <span className="absolute -bottom-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-black px-1 text-[9px] leading-none text-white">10</span>
+          </Link>
+
+          <button type="button" onClick={() => setVisible(true)} aria-label="Open menu" className="sm:hidden">
+            <img src={assets.menuicon} alt="" className="w-5" />
+          </button>
+        </div>
       </div>
 
-      {/* Mobile Menu */}
-        <div className={`fixed top-0 right-0 bottom-0 z-50 overflow-hidden bg-white transition-all duration-300 ${visible ? 'w-full' : 'w-0'}`}>
-            <div className='flex flex-col text-grey-600 '>
-              <div onClick={()=>setVisible(false)} className='flex items-center gap-2 p-3 hover:bg-gray-100 hover:cursor-pointer'>
-                <img className='h-4 rotate-180' src={assets.dropdownicon} alt="" />
-                <p>Back</p>
-              </div>
-              <NavLink onClick={()=>setVisible(false)} className='py-6 pl-2 border text-gray-600' to='/'>HOME</NavLink>
-              <NavLink onClick={()=>setVisible(false)} className='py-6 pl-2 border text-gray-600' to='/catalog'>CATALOG</NavLink>
-              <NavLink onClick={()=>setVisible(false)} className='py-6 pl-2 border text-gray-600' to='/about'>ABOUT</NavLink>
-              <NavLink onClick={()=>setVisible(false)} className='py-6 pl-2 border text-gray-600' to='/contact'>CONTACT</NavLink>
-            </div>
+      <div className={`fixed inset-0 z-50 bg-white transition-transform duration-300 sm:hidden ${visible ? 'translate-x-0' : 'pointer-events-none translate-x-full'}`} aria-hidden={!visible}>
+        <div className="flex items-center gap-3 border-b border-gray-200 p-4">
+          <button type="button" onClick={() => setVisible(false)} aria-label="Close menu" className="flex items-center gap-2 text-gray-600 hover:text-black">
+            <img src={assets.dropdownicon} alt="" className="h-4 rotate-180" />
+            <span>Back</span>
+          </button>
+          <span className="ml-auto font-semibold text-black">NEXORA</span>
         </div>
-    </div>
+
+        <nav className="flex flex-col text-sm font-medium">
+          {links.map(({ to, label, end }) => (
+            <NavLink key={to} to={to} end={end} onClick={() => setVisible(false)} className={mobileLinkClass}>
+              {label}
+            </NavLink>
+          ))}
+        </nav>
+      </div>
+    </header>
   )
 }
 

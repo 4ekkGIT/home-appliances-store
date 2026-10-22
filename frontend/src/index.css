@@ -3,3 +3,8 @@
 a.active hr {
     display: block;
 }
+
+body {
+    background-color: rgba(128, 128, 128, 0.081);
+    font-family: "Roboto Condensed", sans-serif;
+}
