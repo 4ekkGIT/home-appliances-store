@@ -1,14 +1,25 @@
-import { useContext } from 'react'
+import { useContext, useState } from 'react'
 import { ShopContext } from '../context/ShopContext'
 import { Link } from 'react-router-dom'
 
 const ProductItem = ({ id, image, name, price, category, bestSeller }) => {
   const { currency } = useContext(ShopContext)
+  const [activeImage, setActiveImage] = useState(0)
+
+  const changeImageOnHover = (event) => {
+    const bounds = event.currentTarget.getBoundingClientRect()
+    const position = (event.clientX - bounds.left) / bounds.width
+    setActiveImage(Math.min(image.length - 1, Math.floor(position * image.length)))
+  }
 
   return (
     <Link to={`/product/${id}`} className="group flex h-full flex-col overflow-hidden rounded-2xl border border-gray-200 bg-white text-gray-800 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-gray-300 hover:shadow-lg focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-gray-800">
-      <div className="relative flex aspect-square items-center justify-center overflow-hidden bg-gray-50 p-5 sm:p-6">
-        <img className="h-full w-full object-contain transition-transform duration-500 ease-out group-hover:scale-105" src={image[0]} alt={name} loading="lazy" />
+      <div
+        className="relative flex aspect-square items-center justify-center overflow-hidden bg-gray-50 p-5 sm:p-6"
+        onMouseMove={changeImageOnHover}
+        onMouseLeave={() => setActiveImage(0)}
+      >
+        <img className="h-full w-full object-contain transition-transform duration-500 ease-out group-hover:scale-105" src={image[activeImage]} alt={name} loading="lazy" />
         {bestSeller && (
           <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-gray-700 shadow-sm">
             Bestseller

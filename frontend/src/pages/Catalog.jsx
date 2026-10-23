@@ -2,6 +2,9 @@ import { useContext, useMemo, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import ProductItem from '../components/ProductItem'
 import { ShopContext } from '../context/ShopContext'
+import Fuse from 'fuse.js'
+
+
 
 const Catalog = () => {
   const { products, currency } = useContext(ShopContext)
@@ -15,6 +18,17 @@ const Catalog = () => {
   )
   const [filtersOpen, setFiltersOpen] = useState(false)
   const searchQuery = searchParams.get('query') ?? ''
+
+  // fuzzy search
+  const fuse = useMemo(
+  () =>
+    new Fuse(products, {
+      keys: ['name', 'category', 'subCategory'],
+      threshold: 0.4,
+      ignoreLocation: true,
+    }),
+  [products],
+)
 
   const categories = useMemo(
     () => [...new Set(products.map((product) => product.category))],
@@ -31,37 +45,49 @@ const Catalog = () => {
   )
   const highestPrice = Math.ceil(Math.max(...products.map((product) => product.price)))
 
-  const visibleProducts = useMemo(() => {
-    const query = searchQuery.trim().toLowerCase()
-    const filteredProducts = products.filter((product) => {
-      const matchesSearch =
-        !query ||
-        `${product.name} ${product.category} ${product.subCategory}`
-          .toLowerCase()
-          .includes(query)
+  
+const visibleProducts = useMemo(() => {
+  const query = searchQuery.trim()
 
-      return (
-        matchesSearch &&
-        (!selectedCategory || product.category === selectedCategory) &&
-        (!selectedSubCategory || product.subCategory === selectedSubCategory) &&
-        (!bestSellerOnly || product.bestSeller) &&
-        product.price <= maxPrice
-      )
-    })
+  const matchingProducts = query
+    ? fuse.search(query).map((result) => result.item)
+    : products
 
-    if (sortBy === 'price-low') {
-      return filteredProducts.sort((a, b) => a.price - b.price)
-    }
-    if (sortBy === 'price-high') {
-      return filteredProducts.sort((a, b) => b.price - a.price)
-    }
-    if (sortBy === 'newest') {
-      return filteredProducts.sort(
-        (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
-      )
-    }
-    return filteredProducts
-  }, [products, searchQuery, selectedCategory, selectedSubCategory, bestSellerOnly, maxPrice, sortBy])
+  const filteredProducts = matchingProducts.filter((product) => {
+    return (
+      (!selectedCategory || product.category === selectedCategory) &&
+      (!selectedSubCategory || product.subCategory === selectedSubCategory) &&
+      (!bestSellerOnly || product.bestSeller) &&
+      product.price <= maxPrice
+    )
+  })
+
+  if (sortBy === 'price-low') {
+    return filteredProducts.sort((a, b) => a.price - b.price)
+  }
+
+  if (sortBy === 'price-high') {
+    return filteredProducts.sort((a, b) => b.price - a.price)
+  }
+
+  if (sortBy === 'newest') {
+    return filteredProducts.sort(
+      (a, b) => new Date(b.date).getTime() - new Date(a.date).getTime(),
+    )
+  }
+
+  return filteredProducts
+}, [
+  products,
+  fuse,
+  searchQuery,
+  selectedCategory,
+  selectedSubCategory,
+  bestSellerOnly,
+  maxPrice,
+  sortBy,
+])
+
 
   const activeFilters = Boolean(selectedCategory || selectedSubCategory || bestSellerOnly || maxPrice < highestPrice)
 
