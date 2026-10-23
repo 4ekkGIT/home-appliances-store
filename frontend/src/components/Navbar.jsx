@@ -1,5 +1,5 @@
-import React, { useState } from 'react'
-import { Link, NavLink } from 'react-router-dom'
+import { useState } from 'react'
+import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { assets } from '../assets/assets.js'
 
 const links = [
@@ -21,11 +21,12 @@ const mobileLinkClass = ({ isActive }) =>
 
 const Navbar = () => {
   const [visible, setVisible] = useState(false)
+  const navigate = useNavigate()
 
   const handleSearch = (e) => {
     e.preventDefault()
     const query = e.currentTarget.elements.search.value.trim()
-    if (query) window.location.href = `/searchbar?query=${encodeURIComponent(query)}`
+    if (query) navigate(`/catalog?query=${encodeURIComponent(query)}`)
   }
 
   return (

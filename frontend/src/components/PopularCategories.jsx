@@ -2,16 +2,16 @@ import { Link } from 'react-router-dom'
 import { assets } from '../assets/assets.js'
 
 const categories = [
-  { name: 'Special offers', image: assets.cheapDealsCategory },
-  { name: 'Smartphones', image: assets.smartphoneCategory },
-  { name: 'Headphones', image: assets.headphonesCategory },
-  { name: 'Laptops', image: assets.laptopsCategory },
-  { name: 'Televisions', image: assets.tvsCategory },
-  { name: 'Refrigerators', image: assets.fridgesCategory },
-  { name: 'Washing machines', image: assets.washingMachineCategory },
-  { name: 'Vacuum cleaners', image: assets.vacuumCleanerCategory },
-  { name: 'Heaters', image: assets.heaterCategory },
-  { name: 'Water heaters', image: assets.waterHeatersCategory },
+  { name: 'Special offers', image: assets.cheapDealsCategory, filter: { bestSeller: true } },
+  { name: 'Smartphones', image: assets.smartphoneCategory, filter: { subCategory: 'Smartphones' } },
+  { name: 'Headphones', image: assets.headphonesCategory, filter: { subCategory: 'Headphones' } },
+  { name: 'Laptops', image: assets.laptopsCategory, filter: { subCategory: 'Laptops' } },
+  { name: 'Televisions', image: assets.tvsCategory, filter: { subCategory: 'TVs' } },
+  { name: 'Refrigerators', image: assets.fridgesCategory, filter: { subCategory: 'Refrigerators' } },
+  { name: 'Washing machines', image: assets.washingMachineCategory, filter: { subCategory: 'Washing Machines' } },
+  { name: 'Vacuum cleaners', image: assets.vacuumCleanerCategory, filter: { subCategory: 'Vacuum Cleaners' } },
+  { name: 'Heaters', image: assets.heaterCategory, filter: { subCategory: 'Heaters' } },
+  { name: 'Water heaters', image: assets.waterHeatersCategory, filter: { subCategory: 'Water Heaters' } },
 ]
 
 const PopularCategories = () => {
@@ -44,7 +44,7 @@ const PopularCategories = () => {
         {categories.map((category) => (
           <li key={category.name}>
             <Link
-              to="/catalog"
+              to={`/catalog?${new URLSearchParams(category.filter)}`}
               aria-label={`Browse ${category.name}`}
               className="group flex h-full min-h-36 items-center justify-between overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-gray-300 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800 sm:min-h-44 sm:px-5"
             >
