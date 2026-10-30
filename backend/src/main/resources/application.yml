@@ -1,0 +1,13 @@
+spring:
+  application:
+    name: nexora-backend
+
+  datasource:
+    url: jdbc:postgresql://localhost:5432/nexora
+    username: nexora_user
+    password: change_me
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
