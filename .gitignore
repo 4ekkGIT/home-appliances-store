@@ -26,6 +26,11 @@ replay_pid*
 # macOS
 .DS_Store
 
+# IDE
+.idea/
+.idea?/
+*.iml
+
 # Maven
 /backend/target/
 

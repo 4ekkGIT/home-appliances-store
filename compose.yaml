@@ -7,9 +7,9 @@ services:
     environment:
       POSTGRES_DB: nexora
       POSTGRES_USER: nexora_user
-      POSTGRES_PASSWORD: change_me
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?Set POSTGRES_PASSWORD in .env}
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     volumes:
       - nexora-data:/var/lib/postgresql/data
 

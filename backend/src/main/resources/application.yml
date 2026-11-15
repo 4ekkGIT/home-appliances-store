@@ -3,9 +3,9 @@ spring:
     name: nexora-backend
 
   datasource:
-    url: jdbc:postgresql://localhost:5432/nexora
+    url: ${DB_URL:jdbc:postgresql://localhost:5432/nexora}
     username: nexora_user
-    password: change_me
+    password: ${POSTGRES_PASSWORD}
 
   jpa:
     hibernate:
