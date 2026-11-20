@@ -6,7 +6,13 @@ import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
 @Entity
-@Table(name = "products")
+@Table(
+        name = "products",
+        uniqueConstraints = @UniqueConstraint(
+                name = "uq_products_id_category",
+                columnNames = {"id", "category_id"}
+        )
+)
 public class Product {
 
     @Id
@@ -32,12 +38,6 @@ public class Product {
 
     @Column(nullable = false, precision = 12, scale = 2)
     private BigDecimal price;
-
-    @Column(name = "stock_quantity", nullable = false)
-    private Integer stockQuantity = 0;
-
-    @Column(name = "image_url", length = 500)
-    private String imageUrl;
 
     @Column(name = "is_active", nullable = false)
     private Boolean active = true;
