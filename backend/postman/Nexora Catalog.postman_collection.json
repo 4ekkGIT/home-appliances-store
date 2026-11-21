@@ -1,0 +1,243 @@
+{
+  "info": {
+    "name": "Nexora Catalog API",
+    "description": "CRUD and catalog search checks. Set baseUrl and the Spring Security basic-auth password before running.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "basic",
+    "basic": [
+      { "key": "username", "value": "{{username}}", "type": "string" },
+      { "key": "password", "value": "{{password}}", "type": "string" }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "if (pm.info.requestName === 'Create category') {",
+          "  pm.collectionVariables.set('runTag', Date.now().toString());",
+          "}"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8080" },
+    { "key": "username", "value": "admin@example.com" },
+    { "key": "password", "value": "" },
+    { "key": "runTag", "value": "" },
+    { "key": "categoryId", "value": "" },
+    { "key": "attributeId", "value": "" },
+    { "key": "productId", "value": "" },
+    { "key": "imageId", "value": "" },
+    { "key": "imageToDeleteId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Get current admin",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/auth/me" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('authenticated as admin', () => { const result = pm.response.json(); pm.response.to.have.status(200); pm.expect(result.email).to.eql(pm.collectionVariables.get('username')); pm.expect(result.roles).to.include('ROLE_ADMIN'); });"] } }]
+        }
+      ]
+    },
+    {
+      "name": "Category attributes",
+      "item": [
+        {
+          "name": "Create category",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Postman Category {{runTag}}\",\n  \"slug\": \"postman-category-{{runTag}}\",\n  \"description\": \"Postman API test\"\n}" },
+            "url": "{{baseUrl}}/api/categories"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('category created', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('categoryId', pm.response.json().id);"] } }]
+        },
+        {
+          "name": "List category attributes",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/categories/{{categoryId}}/attributes" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('attributes listed', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Create category attribute",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Capacity\",\n  \"slug\": \"capacity\",\n  \"dataType\": \"NUMBER\",\n  \"unit\": \"L\",\n  \"options\": [],\n  \"required\": false,\n  \"filterable\": true,\n  \"displayOrder\": 0\n}" },
+            "url": "{{baseUrl}}/api/categories/{{categoryId}}/attributes"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('attribute created', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('attributeId', pm.response.json().id);"] } }]
+        },
+        {
+          "name": "Update category attribute",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Capacity\",\n  \"slug\": \"capacity\",\n  \"dataType\": \"NUMBER\",\n  \"unit\": \"L\",\n  \"options\": [],\n  \"required\": false,\n  \"filterable\": true,\n  \"displayOrder\": 1\n}" },
+            "url": "{{baseUrl}}/api/categories/{{categoryId}}/attributes/{{attributeId}}"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('attribute updated', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Get category attribute",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/categories/{{categoryId}}/attributes/{{attributeId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('category attribute retrieved', () => pm.response.to.have.status(200));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "Products",
+      "item": [
+        {
+          "name": "Create product with attributes and image",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"categoryId\": {{categoryId}},\n  \"name\": \"Postman Product {{runTag}}\",\n  \"slug\": \"postman-product-{{runTag}}\",\n  \"description\": \"Product API test\",\n  \"price\": 100,\n  \"active\": true,\n  \"attributes\": [{\"attributeId\": {{attributeId}}, \"valueNumber\": 50}],\n  \"images\": [{\"imageUrl\": \"https://example.com/product-{{runTag}}.jpg\", \"altText\": \"Test image\", \"displayOrder\": 0, \"primary\": true}]\n}" },
+            "url": "{{baseUrl}}/api/products"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('product created with details', () => { pm.response.to.have.status(201); pm.expect(pm.response.json().attributes).to.have.length(1); pm.expect(pm.response.json().images).to.have.length(1); });", "const product = pm.response.json();", "pm.collectionVariables.set('productId', product.id);", "pm.collectionVariables.set('imageId', product.images[0].id);"] } }]
+        },
+        {
+          "name": "Search, filter, sort and paginate products",
+          "request": {
+            "method": "GET",
+            "url": "{{baseUrl}}/api/products?q=Postman%20Product&categoryId={{categoryId}}&minPrice=50&maxPrice=150&active=true&attributeId={{attributeId}}&valueNumber=50&page=0&size=10&sortBy=price&sortDirection=DESC"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('search and pagination returned product', () => { const result = pm.response.json(); pm.response.to.have.status(200); pm.expect(result.content.some(item => item.id === Number(pm.collectionVariables.get('productId')))).to.eql(true); pm.expect(result.page).to.eql(0); pm.expect(result.size).to.eql(10); });"] } }]
+        },
+        {
+          "name": "Get product detail",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/products/{{productId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('product has attributes and images', () => { const result = pm.response.json(); pm.response.to.have.status(200); pm.expect(result.attributes).to.have.length(1); pm.expect(result.images).to.have.length(1); });"] } }]
+        },
+        {
+          "name": "Update product",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\n  \"categoryId\": {{categoryId}},\n  \"name\": \"Postman Product Updated {{runTag}}\",\n  \"slug\": \"postman-product-{{runTag}}\",\n  \"description\": \"Updated product\",\n  \"price\": 120,\n  \"active\": true,\n  \"attributes\": [{\"attributeId\": {{attributeId}}, \"valueNumber\": 55}],\n  \"images\": [{\"imageUrl\": \"https://example.com/product-{{runTag}}.jpg\", \"altText\": \"Updated test image\", \"displayOrder\": 0, \"primary\": true}]\n}" },
+            "url": "{{baseUrl}}/api/products/{{productId}}"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('product updated', () => pm.response.to.have.status(200));", "const product = pm.response.json();", "pm.collectionVariables.set('imageId', product.images[0].id);"] } }]
+        }
+      ]
+    },
+    {
+      "name": "Product attributes",
+      "item": [
+        {
+          "name": "List product attributes",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/products/{{productId}}/attributes" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('product attributes listed', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Get one product attribute",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/products/{{productId}}/attributes/{{attributeId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('product attribute retrieved', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Replace product attributes",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"attributes\":[{\"attributeId\":{{attributeId}},\"valueNumber\":60}]}" },
+            "url": "{{baseUrl}}/api/products/{{productId}}/attributes"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('product attributes replaced', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Update one product attribute",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"attributeId\":{{attributeId}},\"valueNumber\":65}" },
+            "url": "{{baseUrl}}/api/products/{{productId}}/attributes/{{attributeId}}"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('product attribute updated', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Delete one product attribute",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/products/{{productId}}/attributes/{{attributeId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('product attribute deleted', () => pm.response.to.have.status(204));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "Product images",
+      "item": [
+        {
+          "name": "List product images",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/products/{{productId}}/images" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('product images listed', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Get one product image",
+          "request": { "method": "GET", "url": "{{baseUrl}}/api/products/{{productId}}/images/{{imageId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('product image retrieved', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Create product image",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"imageUrl\":\"https://example.com/extra-{{runTag}}.jpg\",\"altText\":\"Extra image\",\"displayOrder\":1,\"primary\":false}" },
+            "url": "{{baseUrl}}/api/products/{{productId}}/images"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('image created', () => pm.response.to.have.status(201));", "pm.collectionVariables.set('imageToDeleteId', pm.response.json().id);"] } }]
+        },
+        {
+          "name": "Update product image",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"imageUrl\":\"https://example.com/extra-updated-{{runTag}}.jpg\",\"altText\":\"Updated image\",\"displayOrder\":1,\"primary\":false}" },
+            "url": "{{baseUrl}}/api/products/{{productId}}/images/{{imageToDeleteId}}"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('image updated', () => pm.response.to.have.status(200));"] } }]
+        },
+        {
+          "name": "Replace product images",
+          "request": {
+            "method": "PUT",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"images\":[{\"imageUrl\":\"https://example.com/main-{{runTag}}.jpg\",\"altText\":\"Main\",\"displayOrder\":0,\"primary\":true},{\"imageUrl\":\"https://example.com/secondary-{{runTag}}.jpg\",\"altText\":\"Secondary\",\"displayOrder\":1,\"primary\":false}]}" },
+            "url": "{{baseUrl}}/api/products/{{productId}}/images"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('images replaced', () => { pm.response.to.have.status(200); pm.expect(pm.response.json()).to.have.length(2); });", "pm.collectionVariables.set('imageToDeleteId', pm.response.json()[1].id);"] } }]
+        },
+        {
+          "name": "Delete product image",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/products/{{productId}}/images/{{imageToDeleteId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('image deleted', () => pm.response.to.have.status(204));"] } }]
+        }
+      ]
+    },
+    {
+      "name": "Cleanup",
+      "item": [
+        {
+          "name": "Delete product",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/products/{{productId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('product deleted', () => pm.response.to.have.status(204));"] } }]
+        },
+        {
+          "name": "Delete category attribute",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/categories/{{categoryId}}/attributes/{{attributeId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('category attribute deleted', () => pm.response.to.have.status(204));"] } }]
+        },
+        {
+          "name": "Delete category",
+          "request": { "method": "DELETE", "url": "{{baseUrl}}/api/categories/{{categoryId}}" },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('category deleted', () => pm.response.to.have.status(204));"] } }]
+        }
+      ]
+    }
+  ]
+}

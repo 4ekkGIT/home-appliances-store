@@ -2,12 +2,14 @@ package com.nexora.backend.controller;
 
 import com.nexora.backend.dto.ProductRequest;
 import com.nexora.backend.dto.ProductResponse;
+import com.nexora.backend.dto.PageResponse;
 import com.nexora.backend.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.math.BigDecimal;
 
 @RestController
 @RequestMapping("/api/products")
@@ -19,8 +21,24 @@ public class ProductController {
     }
 
     @GetMapping
-    public List<ProductResponse> findAll() {
-        return service.findAll();
+    public PageResponse<ProductResponse> findAll(
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) Long categoryId,
+            @RequestParam(required = false) Long brandId,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(required = false) Boolean active,
+            @RequestParam(required = false) Long attributeId,
+            @RequestParam(required = false) String valueText,
+            @RequestParam(required = false) BigDecimal valueNumber,
+            @RequestParam(required = false) Boolean valueBoolean,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "name") String sortBy,
+            @RequestParam(defaultValue = "ASC") String sortDirection) {
+        return service.search(q, categoryId, brandId, minPrice, maxPrice, active,
+                attributeId, valueText, valueNumber, valueBoolean,
+                page, size, sortBy, sortDirection);
     }
 
     @GetMapping("/{id}")

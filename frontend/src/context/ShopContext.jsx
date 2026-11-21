@@ -1,26 +1,68 @@
-import { createContext } from "react";
-import { products } from "../assets/assets";
 
-export const ShopContext = createContext();
+import { createContext, useEffect, useState } from 'react'
+import { products } from '../assets/assets'
 
+export const ShopContext = createContext()
 
-const ShopContextProvider = (props) => {
+const ShopContextProvider = ({ children }) => {
+  const currency = '$'
+  const delivery_fee = 10
 
-    const currency = '$';
-    const delivery_fee = 10;
-
-    const value = {
-        products,
-        currency,
-        delivery_fee
+  const [wishlist, setWishlist] = useState(() => {
+    try {
+      return JSON.parse(localStorage.getItem('nexora-wishlist')) || []
+    } catch {
+      return []
     }
+  })
 
-    return (
-        <ShopContext.Provider value={value}>
-            {props.children}
-        </ShopContext.Provider>
+  useEffect(() => {
+    localStorage.setItem('nexora-wishlist', JSON.stringify(wishlist))
+  }, [wishlist])
+
+  const addToWishlist = (productId) => {
+    setWishlist((previous) =>
+      previous.includes(String(productId))
+        ? previous
+        : [...previous, String(productId)]
     )
+  }
 
+  const removeFromWishlist = (productId) => {
+    setWishlist((previous) =>
+      previous.filter((id) => id !== String(productId))
+    )
+  }
+
+  const toggleWishlist = (productId) => {
+    const id = String(productId)
+
+    setWishlist((previous) =>
+      previous.includes(id)
+        ? previous.filter((item) => item !== id)
+        : [...previous, id]
+    )
+  }
+
+  const isWishlisted = (productId) =>
+    wishlist.includes(String(productId))
+
+  const value = {
+    products,
+    currency,
+    delivery_fee,
+    wishlist,
+    addToWishlist,
+    removeFromWishlist,
+    toggleWishlist,
+    isWishlisted,
+  }
+
+  return (
+    <ShopContext.Provider value={value}>
+      {children}
+    </ShopContext.Provider>
+  )
 }
 
-export default ShopContextProvider;
+export default ShopContextProvider
