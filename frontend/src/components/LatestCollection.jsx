@@ -5,7 +5,7 @@ import ProductItem from './ProductItem'
 
 const LatestCollection = () => {
 
-    const {products} = useContext(ShopContext)
+    const {products, catalogLoading, catalogError, loadCatalog} = useContext(ShopContext)
     const latestProducts = products.slice(0, 10)
 
   return (
@@ -16,6 +16,16 @@ const LatestCollection = () => {
       
       {/* Rendering products */}
 
+      {catalogLoading ? (
+        <p role="status" className="py-8 text-center text-sm text-gray-500">Loading products…</p>
+      ) : catalogError ? (
+        <div role="alert" className="py-8 text-center text-sm text-red-700">
+          <p>{catalogError}</p>
+          <button type="button" onClick={() => { void loadCatalog() }} className="mt-2 underline">Try again</button>
+        </div>
+      ) : latestProducts.length === 0 ? (
+        <p className="py-8 text-center text-sm text-gray-500">No products are available yet.</p>
+      ) : (
       <div className='grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-4 gap-y-6'>
         {
             latestProducts.map((item)=>(
@@ -31,6 +41,7 @@ const LatestCollection = () => {
             ))
         }
       </div>
+      )}
 
     </div>
   )

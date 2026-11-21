@@ -33,3 +33,14 @@ POSTGRES_PASSWORD='your-local-database-password' ./backend/mvnw -f backend/pom.x
 Import `backend/postman/Nexora Catalog.postman_collection.json` into Postman. Configure collection/environment variables `baseUrl`, `username`, and `password` with the backend URL and administrator credentials. The collection creates test catalog records and removes them in its cleanup folder.
 
 The `Backend checks` GitHub Actions workflow starts a disposable PostgreSQL service, runs Maven integration tests, starts the backend, and runs the same collection using Newman. Its credentials are test-only and must never be reused outside CI.
+
+## Frontend catalog
+
+The storefront loads products, categories, brands, product details, search results, filters, and sorting from the backend API. Start the backend, then run the frontend:
+
+```sh
+cp frontend/.env.example frontend/.env
+npm --prefix frontend run dev
+```
+
+Set `VITE_API_BASE_URL` to the backend API root when it is not `http://localhost:8080/api`.

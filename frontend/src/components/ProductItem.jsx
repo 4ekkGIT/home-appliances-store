@@ -5,11 +5,14 @@ import { Link } from 'react-router-dom'
 const ProductItem = ({ id, image, name, price, category, bestSeller }) => {
   const { currency } = useContext(ShopContext)
   const [activeImage, setActiveImage] = useState(0)
+  const images = Array.isArray(image) ? image : image ? [image] : []
 
   const changeImageOnHover = (event) => {
     const bounds = event.currentTarget.getBoundingClientRect()
     const position = (event.clientX - bounds.left) / bounds.width
-    setActiveImage(Math.min(image.length - 1, Math.floor(position * image.length)))
+    if (images.length) {
+      setActiveImage(Math.min(images.length - 1, Math.floor(position * images.length)))
+    }
   }
 
   return (
@@ -19,7 +22,11 @@ const ProductItem = ({ id, image, name, price, category, bestSeller }) => {
         onMouseMove={changeImageOnHover}
         onMouseLeave={() => setActiveImage(0)}
       >
-        <img className="h-full w-full object-contain transition-transform duration-500 ease-out group-hover:scale-105" src={image[activeImage]} alt={name} loading="lazy" />
+        {images.length > 0 ? (
+          <img className="h-full w-full object-contain transition-transform duration-500 ease-out group-hover:scale-105" src={images[activeImage]} alt={name} loading="lazy" />
+        ) : (
+          <span className="text-sm text-gray-400">Image unavailable</span>
+        )}
         {bestSeller && (
           <span className="absolute left-3 top-3 rounded-full bg-white/95 px-3 py-1 text-[10px] font-semibold uppercase tracking-wider text-gray-700 shadow-sm">
             Bestseller

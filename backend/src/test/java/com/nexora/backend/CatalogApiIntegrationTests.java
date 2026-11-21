@@ -237,6 +237,162 @@ class CatalogApiIntegrationTests {
         userRepository.deleteByEmailIgnoreCase(email);
     }
 
+    @Test
+    void apiRejectsInvalidInputsAndReturnsNotFoundOrConflictForBoundaryCases() throws Exception {
+        String adminEmail = createUser(StoreUser.Role.ADMIN);
+        Integer categoryId = null;
+        Integer attributeId = null;
+        Integer productId = null;
+
+        try {
+            mockMvc.perform(get("/api/products").param("page", "-1"))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(get("/api/products").param("size", "0"))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(get("/api/products").param("size", "101"))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(get("/api/products").param("sortBy", "unknown"))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(get("/api/products").param("sortDirection", "sideways"))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(get("/api/products")
+                            .param("minPrice", "100")
+                            .param("maxPrice", "99.99"))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(get("/api/products/not-a-number"))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(get("/api/products/999999999"))
+                    .andExpect(status().isNotFound());
+
+            mockMvc.perform(post("/api/products")
+                            .with(httpBasic(adminEmail, PASSWORD))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"categoryId":1,"name":"Invalid price","price":-0.01}
+                                    """))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(post("/api/products")
+                            .with(httpBasic(adminEmail, PASSWORD))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"categoryId":999999999,"name":"Missing category","price":1}
+                                    """))
+                    .andExpect(status().isNotFound());
+
+            String categoryBody = """
+                    {"name":"Boundary Category %s","slug":"boundary-category-%s"}
+                    """.formatted(UUID.randomUUID(), UUID.randomUUID());
+            String categoryResponse = mockMvc.perform(post("/api/categories")
+                            .with(httpBasic(adminEmail, PASSWORD))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(categoryBody))
+                    .andExpect(status().isCreated())
+                    .andReturn().getResponse().getContentAsString();
+            categoryId = JsonPath.read(categoryResponse, "$.id");
+
+            mockMvc.perform(post("/api/categories/{id}/attributes", categoryId)
+                            .with(httpBasic(adminEmail, PASSWORD))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"name":"Choice","dataType":"SELECT","options":[]}
+                                    """))
+                    .andExpect(status().isBadRequest());
+
+            String attributeBody = """
+                    {"name":"Capacity","slug":"capacity","dataType":"NUMBER","options":[],
+                     "required":false,"filterable":true,"displayOrder":0}
+                    """;
+            String attributeResponse = mockMvc.perform(post("/api/categories/{id}/attributes", categoryId)
+                            .with(httpBasic(adminEmail, PASSWORD))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(attributeBody))
+                    .andExpect(status().isCreated())
+                    .andReturn().getResponse().getContentAsString();
+            attributeId = JsonPath.read(attributeResponse, "$.id");
+
+            mockMvc.perform(post("/api/categories/{id}/attributes", categoryId)
+                            .with(httpBasic(adminEmail, PASSWORD))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(attributeBody))
+                    .andExpect(status().isConflict());
+            mockMvc.perform(get("/api/categories/{categoryId}/attributes/{attributeId}",
+                            categoryId, 999999999))
+                    .andExpect(status().isNotFound());
+
+            mockMvc.perform(post("/api/products")
+                            .with(httpBasic(adminEmail, PASSWORD))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"categoryId":%d,"name":"Wrong attribute type","price":1,
+                                     "attributes":[{"attributeId":%d,"valueText":"wrong"}]}
+                                    """.formatted(categoryId, attributeId)))
+                    .andExpect(status().isBadRequest());
+
+            String productResponse = mockMvc.perform(post("/api/products")
+                            .with(httpBasic(adminEmail, PASSWORD))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"categoryId":%d,"name":"Boundary Product %s","price":0,
+                                     "images":[{"imageUrl":"https://example.com/primary.jpg",
+                                                "displayOrder":0,"primary":true}]}
+                                    """.formatted(categoryId, UUID.randomUUID())))
+                    .andExpect(status().isCreated())
+                    .andReturn().getResponse().getContentAsString();
+            productId = JsonPath.read(productResponse, "$.id");
+
+            mockMvc.perform(get("/api/products/{id}", 999999999))
+                    .andExpect(status().isNotFound());
+            mockMvc.perform(post("/api/products/{id}/images", productId)
+                            .with(httpBasic(adminEmail, PASSWORD))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"imageUrl":"https://example.com/duplicate.jpg",
+                                     "displayOrder":0,"primary":false}
+                                    """))
+                    .andExpect(status().isConflict());
+            mockMvc.perform(put("/api/products/{id}/images", productId)
+                            .with(httpBasic(adminEmail, PASSWORD))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"images":[
+                                      {"imageUrl":"https://example.com/first.jpg","displayOrder":0,"primary":true},
+                                      {"imageUrl":"https://example.com/second.jpg","displayOrder":0,"primary":false}
+                                    ]}
+                                    """))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(put("/api/products/{id}/images", productId)
+                            .with(httpBasic(adminEmail, PASSWORD))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"images":[
+                                      {"imageUrl":"https://example.com/first.jpg","displayOrder":0,"primary":true},
+                                      {"imageUrl":"https://example.com/second.jpg","displayOrder":1,"primary":true}
+                                    ]}
+                                    """))
+                    .andExpect(status().isBadRequest());
+            mockMvc.perform(get("/api/products/{id}/images/{imageId}", productId, 999999999))
+                    .andExpect(status().isNotFound());
+        } finally {
+            if (productId != null) {
+                mockMvc.perform(delete("/api/products/{id}", productId)
+                                .with(httpBasic(adminEmail, PASSWORD)))
+                        .andExpect(status().isNoContent());
+            }
+            if (attributeId != null) {
+                mockMvc.perform(delete("/api/categories/{categoryId}/attributes/{attributeId}",
+                                categoryId, attributeId)
+                                .with(httpBasic(adminEmail, PASSWORD)))
+                        .andExpect(status().isNoContent());
+            }
+            if (categoryId != null) {
+                mockMvc.perform(delete("/api/categories/{id}", categoryId)
+                                .with(httpBasic(adminEmail, PASSWORD)))
+                        .andExpect(status().isNoContent());
+            }
+            userRepository.deleteByEmailIgnoreCase(adminEmail);
+        }
+    }
+
     private String createUser(StoreUser.Role role) {
         String email = role.name().toLowerCase() + "-" + UUID.randomUUID() + "@example.com";
         userRepository.saveAndFlush(new StoreUser("Test", null, email,

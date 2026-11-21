@@ -1,19 +1,38 @@
 
-import { useContext } from 'react'
+import { useContext, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { getProductById } from '../api/client'
 import { ShopContext } from '../context/ShopContext'
 
 const Wishlist = () => {
   const {
-    products,
     currency,
     wishlist,
     removeFromWishlist,
   } = useContext(ShopContext)
+  const wishlistKey = wishlist.join(',')
+  const [loadedWishlist, setLoadedWishlist] = useState({ key: null, products: [], error: '' })
 
-  const wishlistProducts = products.filter((product) =>
-    wishlist.includes(String(product._id))
-  )
+  useEffect(() => {
+    let active = true
+    if (wishlist.length === 0) {
+      return () => { active = false }
+    }
+
+    Promise.all(wishlist.map((id) => getProductById(id)))
+      .then((products) => {
+        if (active) setLoadedWishlist({ key: wishlistKey, products, error: '' })
+      })
+      .catch((requestError) => {
+        if (active) setLoadedWishlist({ key: wishlistKey, products: [], error: requestError.message })
+      })
+
+    return () => { active = false }
+  }, [wishlist, wishlistKey])
+
+  const loading = wishlist.length > 0 && loadedWishlist.key !== wishlistKey
+  const wishlistProducts = wishlist.length === 0 || loading ? [] : loadedWishlist.products
+  const error = loading ? '' : loadedWishlist.error
 
   const formatPrice = (price) =>
     new Intl.NumberFormat('en-US', {
@@ -62,7 +81,11 @@ const Wishlist = () => {
       </div>
 
       {/* Empty wishlist */}
-      {wishlistProducts.length === 0 ? (
+      {loading ? (
+        <p role="status" className="py-16 text-center text-sm text-gray-500">Loading wishlist…</p>
+      ) : error ? (
+        <p role="alert" className="py-16 text-center text-sm text-red-700">{error}</p>
+      ) : wishlistProducts.length === 0 ? (
         <section className="flex min-h-[400px] flex-col items-center justify-center rounded-2xl border border-gray-200 bg-white px-6 py-16 text-center">
 
           <div className="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-gray-50">

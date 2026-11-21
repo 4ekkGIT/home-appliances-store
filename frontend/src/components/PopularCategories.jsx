@@ -1,20 +1,27 @@
+import { useContext } from 'react'
 import { Link } from 'react-router-dom'
 import { assets } from '../assets/assets.js'
+import { ShopContext } from '../context/ShopContext'
 
-const categories = [
-  { name: 'Special offers', image: assets.cheapDealsCategory, filter: { bestSeller: true } },
-  { name: 'Smartphones', image: assets.smartphoneCategory, filter: { subCategory: 'Smartphones' } },
-  { name: 'Headphones', image: assets.headphonesCategory, filter: { subCategory: 'Headphones' } },
-  { name: 'Laptops', image: assets.laptopsCategory, filter: { subCategory: 'Laptops' } },
-  { name: 'Televisions', image: assets.tvsCategory, filter: { subCategory: 'TVs' } },
-  { name: 'Refrigerators', image: assets.fridgesCategory, filter: { subCategory: 'Refrigerators' } },
-  { name: 'Washing machines', image: assets.washingMachineCategory, filter: { subCategory: 'Washing Machines' } },
-  { name: 'Vacuum cleaners', image: assets.vacuumCleanerCategory, filter: { subCategory: 'Vacuum Cleaners' } },
-  { name: 'Heaters', image: assets.heaterCategory, filter: { subCategory: 'Heaters' } },
-  { name: 'Water heaters', image: assets.waterHeatersCategory, filter: { subCategory: 'Water Heaters' } },
+const categoryImages = [
+  ['smartphone', assets.smartphoneCategory],
+  ['headphone', assets.headphonesCategory],
+  ['laptop', assets.laptopsCategory],
+  ['television', assets.tvsCategory],
+  ['tv', assets.tvsCategory],
+  ['refrigerator', assets.fridgesCategory],
+  ['fridge', assets.fridgesCategory],
+  ['washing', assets.washingMachineCategory],
+  ['vacuum', assets.vacuumCleanerCategory],
+  ['heater', assets.heaterCategory],
 ]
 
 const PopularCategories = () => {
+  const { categories, catalogLoading, catalogError } = useContext(ShopContext)
+  const getCategoryImage = (category) =>
+    categoryImages.find(([keyword]) => `${category.name} ${category.slug}`.toLowerCase().includes(keyword))?.[1]
+      || assets.cheapDealsCategory
+
   return (
     <section aria-labelledby="popular-categories-heading" className="my-10 sm:my-14">
       <div className="mb-5 flex items-end justify-between gap-4">
@@ -40,11 +47,18 @@ const PopularCategories = () => {
         </Link>
       </div>
 
+      {catalogLoading ? (
+        <p role="status" className="py-8 text-center text-sm text-gray-500">Loading categories…</p>
+      ) : catalogError ? (
+        <p role="alert" className="py-8 text-center text-sm text-red-700">{catalogError}</p>
+      ) : categories.length === 0 ? (
+        <p className="py-8 text-center text-sm text-gray-500">No categories are available yet.</p>
+      ) : (
       <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 sm:gap-4 lg:grid-cols-5">
         {categories.map((category) => (
-          <li key={category.name}>
+          <li key={category.id}>
             <Link
-              to={`/catalog?${new URLSearchParams(category.filter)}`}
+              to={`/catalog?categoryId=${category.id}`}
               aria-label={`Browse ${category.name}`}
               className="group flex h-full min-h-36 items-center justify-between overflow-hidden rounded-2xl border border-gray-200 bg-white px-4 py-3 shadow-sm transition duration-300 hover:-translate-y-1 hover:border-gray-300 hover:shadow-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-gray-800 sm:min-h-44 sm:px-5"
             >
@@ -52,7 +66,7 @@ const PopularCategories = () => {
                 {category.name}
               </span>
               <img
-                src={category.image}
+                src={getCategoryImage(category)}
                 alt=""
                 loading="lazy"
                 className="h-24 w-24 shrink-0 object-contain transition-transform duration-300 group-hover:scale-105 sm:h-32 sm:w-32"
@@ -61,6 +75,7 @@ const PopularCategories = () => {
           </li>
         ))}
       </ul>
+      )}
     </section>
   )
 }

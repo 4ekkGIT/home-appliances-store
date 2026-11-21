@@ -26,7 +26,7 @@ const Navbar = () => {
   const handleSearch = (e) => {
     e.preventDefault()
     const query = e.currentTarget.elements.search.value.trim()
-    if (query) navigate(`/catalog?query=${encodeURIComponent(query)}`)
+    navigate(query ? `/catalog?query=${encodeURIComponent(query)}` : '/catalog')
   }
 
   return (
