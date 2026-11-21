@@ -2,10 +2,12 @@
 package com.nexora.backend.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "brands")
+@Getter
 public class Brand {
 
     @Id
@@ -25,5 +27,22 @@ public class Brand {
     private LocalDateTime createdAt;
 
     protected Brand() {
+    }
+
+    public Brand(String name, String slug, String logoUrl) {
+        this.name = name;
+        this.slug = slug;
+        this.logoUrl = logoUrl;
+    }
+
+    public void updateDetails(String name, String slug, String logoUrl) {
+        this.name = name;
+        this.slug = slug;
+        this.logoUrl = logoUrl;
+    }
+
+    @PrePersist
+    private void onCreate() {
+        createdAt = LocalDateTime.now();
     }
 }

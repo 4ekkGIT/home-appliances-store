@@ -2,6 +2,7 @@
 package com.nexora.backend.entity;
 
 import jakarta.persistence.*;
+import lombok.Getter;
 import java.math.BigDecimal;
 import java.time.LocalDateTime;
 
@@ -13,6 +14,7 @@ import java.time.LocalDateTime;
                 columnNames = {"id", "category_id"}
         )
 )
+@Getter
 public class Product {
 
     @Id
@@ -49,5 +51,38 @@ public class Product {
     private LocalDateTime updatedAt;
 
     protected Product() {
+    }
+
+    public Product(Category category, Brand brand, String name, String slug,
+                   String description, BigDecimal price) {
+        this.category = category;
+        this.brand = brand;
+        this.name = name;
+        this.slug = slug;
+        this.description = description;
+        this.price = price;
+    }
+
+    public void updateDetails(Category category, Brand brand, String name, String slug,
+                              String description, BigDecimal price, Boolean active) {
+        this.category = category;
+        this.brand = brand;
+        this.name = name;
+        this.slug = slug;
+        this.description = description;
+        this.price = price;
+        this.active = active;
+    }
+
+    @PrePersist
+    private void onCreate() {
+        LocalDateTime now = LocalDateTime.now();
+        createdAt = now;
+        updatedAt = now;
+    }
+
+    @PreUpdate
+    private void onUpdate() {
+        updatedAt = LocalDateTime.now();
     }
 }
