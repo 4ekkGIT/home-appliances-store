@@ -10,6 +10,11 @@ public interface ProductUnitRepository extends JpaRepository<ProductUnit, Long> 
     Optional<ProductUnit> findByInventoryCode(String inventoryCode);
     Optional<ProductUnit> findBySerialNumber(String serialNumber);
     boolean existsByInventoryCode(String inventoryCode);
+    boolean existsBySerialNumber(String serialNumber);
+    long countByProductIdAndStatus(Long productId, ProductUnit.Status status);
+    long countByProductIdAndWarehouseIdAndStatus(Long productId, Long warehouseId, ProductUnit.Status status);
+    long countByWarehouseIdAndStatus(Long warehouseId, ProductUnit.Status status);
     List<ProductUnit> findByProductIdAndStatus(Long productId, ProductUnit.Status status);
     List<ProductUnit> findByWarehouseIdAndStatus(Long warehouseId, ProductUnit.Status status);
+    List<ProductUnit> findAllByOrderByIdDesc();
 }
