@@ -17,12 +17,14 @@ import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
 import java.util.UUID;
 
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -57,9 +59,15 @@ class InventoryApiIntegrationTests {
     @Autowired
     private InventoryMovementRepository movementRepository;
 
+    private RequestPostProcessor authenticatedAs(String email) {
+        return request -> csrf().postProcessRequest(
+                user(email).roles("ADMIN").postProcessRequest(request));
+    }
+
     @Test
     void managesRegistrationTransferStatusAndAvailableStock() throws Exception {
         String adminEmail = "inventory-admin-" + UUID.randomUUID() + "@example.com";
+        Long unitId = null;
         userRepository.saveAndFlush(new StoreUser(
                 "Inventory", "Admin", adminEmail,
                 passwordEncoder.encode(PASSWORD), null, StoreUser.Role.ADMIN
@@ -83,7 +91,7 @@ class InventoryApiIntegrationTests {
 
         try {
             String registerResponse = mockMvc.perform(post("/api/inventory/units")
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"productId":%d,"warehouseId":%d,"serialNumber":"SN-%s"}
@@ -92,7 +100,7 @@ class InventoryApiIntegrationTests {
                     .andExpect(jsonPath("$.inventoryCode").exists())
                     .andExpect(jsonPath("$.status").value("AVAILABLE"))
                     .andReturn().getResponse().getContentAsString();
-            Long unitId = ((Number) JsonPath.read(registerResponse, "$.id")).longValue();
+            unitId = ((Number) JsonPath.read(registerResponse, "$.id")).longValue();
 
             mockMvc.perform(get("/api/inventory/available")
                             .param("productId", product.getId().toString())
@@ -101,7 +109,7 @@ class InventoryApiIntegrationTests {
                     .andExpect(jsonPath("$.availableQuantity").value(1));
 
             mockMvc.perform(post("/api/inventory/units/{id}/transfer", unitId)
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"toWarehouseId":%d,"comment":"Between warehouses"}
@@ -110,7 +118,7 @@ class InventoryApiIntegrationTests {
                     .andExpect(jsonPath("$.warehouseId").value(destination.getId()));
 
             mockMvc.perform(post("/api/inventory/units/{id}/status", unitId)
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"status":"RESERVED","comment":"Customer reservation"}
@@ -119,7 +127,7 @@ class InventoryApiIntegrationTests {
                     .andExpect(jsonPath("$.status").value("RESERVED"));
 
             mockMvc.perform(post("/api/inventory/units/{id}/status", unitId)
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"status":"AVAILABLE","comment":"Release reservation"}
@@ -128,7 +136,7 @@ class InventoryApiIntegrationTests {
                     .andExpect(jsonPath("$.status").value("AVAILABLE"));
 
             mockMvc.perform(post("/api/inventory/units/{id}/status", unitId)
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"status":"WRITTEN_OFF","comment":"Warehouse write-off"}
@@ -137,7 +145,7 @@ class InventoryApiIntegrationTests {
                     .andExpect(jsonPath("$.status").value("WRITTEN_OFF"));
 
             mockMvc.perform(post("/api/inventory/units/{id}/status", unitId)
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"status":"AVAILABLE","comment":"Invalid restore"}
@@ -145,7 +153,7 @@ class InventoryApiIntegrationTests {
                     .andExpect(status().isBadRequest());
 
             mockMvc.perform(post("/api/inventory/units/{id}/transfer", unitId)
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"toWarehouseId":%d}
@@ -161,14 +169,12 @@ class InventoryApiIntegrationTests {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.availableQuantity").value(0));
         } finally {
-            movementRepository.deleteAll(
-                    movementRepository.findAll().stream()
-                            .filter(movement -> movement.getProductUnit().getProduct().getId().equals(product.getId()))
-                            .toList()
-            );
-            unitRepository.findAll().stream()
-                    .filter(unit -> unit.getProduct().getId().equals(product.getId()))
-                    .forEach(unitRepository::delete);
+            if (unitId != null) {
+                movementRepository.deleteAll(
+                        movementRepository.findByProductUnitIdOrderByCreatedAtDesc(unitId)
+                );
+                unitRepository.findById(unitId).ifPresent(unitRepository::delete);
+            }
             productRepository.delete(product);
             warehouseRepository.delete(destination);
             warehouseRepository.delete(source);

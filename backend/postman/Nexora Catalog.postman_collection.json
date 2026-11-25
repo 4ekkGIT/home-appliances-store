@@ -1,16 +1,10 @@
 {
   "info": {
     "name": "Nexora Catalog API",
-    "description": "CRUD and catalog search checks. Set baseUrl and the Spring Security basic-auth password before running.",
+    "description": "CRUD and catalog search checks. Set baseUrl and administrator credentials before running.",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
   },
-  "auth": {
-    "type": "basic",
-    "basic": [
-      { "key": "username", "value": "{{username}}", "type": "string" },
-      { "key": "password", "value": "{{password}}", "type": "string" }
-    ]
-  },
+  "auth": { "type": "noauth" },
   "event": [
     {
       "listen": "prerequest",
@@ -19,6 +13,12 @@
         "exec": [
           "if (pm.info.requestName === 'Create category') {",
           "  pm.collectionVariables.set('runTag', Date.now().toString());",
+          "}",
+          "if (!['GET', 'HEAD', 'OPTIONS'].includes(pm.request.method.toUpperCase())) {",
+          "  pm.sendRequest({ url: pm.collectionVariables.get('baseUrl') + '/api/auth/csrf', method: 'GET' }, (error, response) => {",
+          "    if (error) throw error;",
+          "    pm.request.headers.upsert({ key: 'X-XSRF-TOKEN', value: response.json().token });",
+          "  });",
           "}"
         ]
       }
@@ -39,6 +39,16 @@
     {
       "name": "Authentication",
       "item": [
+        {
+          "name": "Sign in administrator",
+          "request": {
+            "method": "POST",
+            "header": [{ "key": "Content-Type", "value": "application/json" }],
+            "body": { "mode": "raw", "raw": "{\"email\":\"{{username}}\",\"password\":\"{{password}}\"}" },
+            "url": "{{baseUrl}}/api/auth/login"
+          },
+          "event": [{ "listen": "test", "script": { "type": "text/javascript", "exec": ["pm.test('administrator signed in', () => { pm.response.to.have.status(200); pm.expect(pm.response.json().roles).to.include('ROLE_ADMIN'); });"] } }]
+        },
         {
           "name": "Get current admin",
           "request": { "method": "GET", "url": "{{baseUrl}}/api/auth/me" },

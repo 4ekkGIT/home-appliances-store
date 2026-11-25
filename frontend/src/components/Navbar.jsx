@@ -1,6 +1,7 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { assets } from '../assets/assets.js'
+import { useAuth } from '../context/AuthContext'
 
 const links = [
   { to: '/', label: 'HOME', end: true },
@@ -21,7 +22,39 @@ const mobileLinkClass = ({ isActive }) =>
 
 const Navbar = () => {
   const [visible, setVisible] = useState(false)
+  const [logoutError, setLogoutError] = useState('')
+  const [logoutConfirmationOpen, setLogoutConfirmationOpen] = useState(false)
+  const [isLoggingOut, setIsLoggingOut] = useState(false)
+  const logoutDialogRef = useRef(null)
   const navigate = useNavigate()
+  const { user, logout } = useAuth()
+
+  useEffect(() => {
+    const dialog = logoutDialogRef.current
+    if (logoutConfirmationOpen && dialog && !dialog.open) {
+      dialog.showModal()
+    }
+  }, [logoutConfirmationOpen])
+
+  const openLogoutConfirmation = () => {
+    setLogoutError('')
+    setLogoutConfirmationOpen(true)
+  }
+
+  const handleLogout = async () => {
+    setLogoutError('')
+    setIsLoggingOut(true)
+    try {
+      await logout()
+      setLogoutConfirmationOpen(false)
+      setVisible(false)
+      navigate('/', { replace: true })
+    } catch (error) {
+      setLogoutError(error.message)
+    } finally {
+      setIsLoggingOut(false)
+    }
+  }
 
   const handleSearch = (e) => {
     e.preventDefault()
@@ -73,7 +106,14 @@ const Navbar = () => {
             </button>
             <div className="invisible absolute right-0 top-full z-50 w-40 pt-3 opacity-0 transition-all group-hover:visible group-hover:opacity-100 group-focus-within:visible group-focus-within:opacity-100">
               <div className="flex flex-col gap-2 rounded-lg bg-white px-5 py-4 text-sm text-gray-600 shadow-lg ring-1 ring-gray-100">
-                <Link to="/profile" className="hover:text-black">My Profile</Link>
+                {user ? (
+                  <>
+                    <span className="max-w-48 truncate text-gray-900">{user.email}</span>
+                    <button type="button" onClick={openLogoutConfirmation} className="text-left hover:text-black">Sign Out</button>
+                  </>
+                ) : (
+                  <Link to="/login" className="hover:text-black">Sign In</Link>
+                )}
                 <Link to="/orders" className="hover:text-black">Orders</Link>
                 <Link to="/wishlist" className="hover:text-black">Wishlist</Link>
               </div>
@@ -107,7 +147,49 @@ const Navbar = () => {
             </NavLink>
           ))}
         </nav>
+        <div className="flex flex-col gap-4 border-t border-gray-200 p-4 text-sm">
+          {user ? (
+            <>
+              <span className="truncate text-gray-500">{user.email}</span>
+              <button type="button" onClick={openLogoutConfirmation} className="text-left">Sign Out</button>
+            </>
+          ) : (
+            <Link to="/login" onClick={() => setVisible(false)}>Sign In</Link>
+          )}
+        </div>
       </div>
+
+      {logoutConfirmationOpen && (
+        <dialog
+          ref={logoutDialogRef}
+          aria-labelledby="logout-dialog-title"
+          onCancel={() => setLogoutConfirmationOpen(false)}
+          onClose={() => setLogoutConfirmationOpen(false)}
+          className="m-auto w-[calc(100%-2rem)] max-w-sm rounded-xl border-0 bg-white p-6 text-gray-900 shadow-xl backdrop:bg-black/50"
+        >
+          <h2 id="logout-dialog-title" className="text-lg font-semibold">Sign out?</h2>
+          <p className="mt-2 text-sm text-gray-600">Are you sure you want to sign out of your account?</p>
+          {logoutError && <p role="alert" className="mt-3 text-sm text-red-600">{logoutError}</p>}
+          <div className="mt-6 flex justify-end gap-3">
+            <button
+              type="button"
+              onClick={() => setLogoutConfirmationOpen(false)}
+              disabled={isLoggingOut}
+              className="rounded-lg border border-gray-300 px-4 py-2 text-sm hover:bg-gray-50 disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="button"
+              onClick={handleLogout}
+              disabled={isLoggingOut}
+              className="rounded-lg bg-black px-4 py-2 text-sm text-white hover:bg-gray-700 disabled:opacity-50"
+            >
+              {isLoggingOut ? 'Signing out…' : 'Sign Out'}
+            </button>
+          </div>
+        </dialog>
+      )}
     </header>
   )
 }

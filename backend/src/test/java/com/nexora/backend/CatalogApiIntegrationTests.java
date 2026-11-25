@@ -7,13 +7,19 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.mock.web.MockHttpSession;
 import org.springframework.http.MediaType;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.test.web.servlet.request.RequestPostProcessor;
+import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.MockMvc;
 
+import java.nio.charset.StandardCharsets;
+import java.util.Base64;
 import java.util.UUID;
 
-import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.httpBasic;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
+import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -40,7 +46,7 @@ class CatalogApiIntegrationTests {
         String adminEmail = createUser(StoreUser.Role.ADMIN);
 
         String categoryResponse = mockMvc.perform(post("/api/categories")
-                        .with(httpBasic(adminEmail, PASSWORD))
+                        .with(authenticatedAs(adminEmail))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"API Category %s","slug":"api-category-%s"}
@@ -54,7 +60,7 @@ class CatalogApiIntegrationTests {
                  "options":[],"required":true,"filterable":true,"displayOrder":0}
                 """;
         String attributeResponse = mockMvc.perform(post("/api/categories/{id}/attributes", categoryId)
-                        .with(httpBasic(adminEmail, PASSWORD))
+                        .with(authenticatedAs(adminEmail))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(attributeBody))
                 .andExpect(status().isCreated())
@@ -67,7 +73,7 @@ class CatalogApiIntegrationTests {
         mockMvc.perform(get("/api/categories/{categoryId}/attributes/{attributeId}", categoryId, attributeId))
                 .andExpect(status().isOk());
         mockMvc.perform(put("/api/categories/{categoryId}/attributes/{attributeId}", categoryId, attributeId)
-                        .with(httpBasic(adminEmail, PASSWORD))
+                        .with(authenticatedAs(adminEmail))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Capacity","slug":"capacity","dataType":"NUMBER","unit":"liters",
@@ -84,7 +90,7 @@ class CatalogApiIntegrationTests {
                             "displayOrder":0,"primary":true}]}
                 """.formatted(categoryId, UUID.randomUUID(), UUID.randomUUID(), attributeId);
         String productResponse = mockMvc.perform(post("/api/products")
-                        .with(httpBasic(adminEmail, PASSWORD))
+                        .with(authenticatedAs(adminEmail))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(productBody))
                 .andExpect(status().isCreated())
@@ -119,7 +125,7 @@ class CatalogApiIntegrationTests {
         mockMvc.perform(get("/api/products/{id}/attributes/{attributeId}", productId, attributeId))
                 .andExpect(status().isOk());
         mockMvc.perform(put("/api/products/{id}/attributes/{attributeId}", productId, attributeId)
-                        .with(httpBasic(adminEmail, PASSWORD))
+                        .with(authenticatedAs(adminEmail))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"attributeId":%d,"valueNumber":60}
@@ -127,7 +133,7 @@ class CatalogApiIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.valueNumber").value(60));
         mockMvc.perform(put("/api/products/{id}/attributes", productId)
-                        .with(httpBasic(adminEmail, PASSWORD))
+                        .with(authenticatedAs(adminEmail))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"attributes":[{"attributeId":%d,"valueNumber":70}]}
@@ -145,14 +151,14 @@ class CatalogApiIntegrationTests {
                  "displayOrder":1,"primary":false}
                 """;
         String createdImageResponse = mockMvc.perform(post("/api/products/{id}/images", productId)
-                        .with(httpBasic(adminEmail, PASSWORD))
+                        .with(authenticatedAs(adminEmail))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(extraImage))
                 .andExpect(status().isCreated())
                 .andReturn().getResponse().getContentAsString();
         int extraImageId = JsonPath.read(createdImageResponse, "$.id");
         mockMvc.perform(put("/api/products/{id}/images/{imageId}", productId, extraImageId)
-                        .with(httpBasic(adminEmail, PASSWORD))
+                        .with(authenticatedAs(adminEmail))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"imageUrl":"https://example.com/updated.jpg","altText":"Updated",
@@ -161,7 +167,7 @@ class CatalogApiIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.primary").value(true));
         mockMvc.perform(put("/api/products/{id}/images", productId)
-                        .with(httpBasic(adminEmail, PASSWORD))
+                        .with(authenticatedAs(adminEmail))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"images":[
@@ -175,16 +181,16 @@ class CatalogApiIntegrationTests {
         if (userRepository.findByEmailIgnoreCase(adminEmail).isEmpty()) {
             throw new AssertionError("Admin account disappeared during catalog operations");
         }
-        mockMvc.perform(get("/api/auth/me").with(httpBasic(adminEmail, PASSWORD)))
+        mockMvc.perform(get("/api/auth/me").with(authenticatedAs(adminEmail)))
                 .andExpect(status().isOk());
         mockMvc.perform(delete("/api/categories/{categoryId}/attributes/{attributeId}", categoryId, attributeId)
-                        .with(httpBasic(adminEmail, PASSWORD)))
+                        .with(authenticatedAs(adminEmail)))
                 .andExpect(status().isNoContent());
         mockMvc.perform(delete("/api/products/{id}", productId)
-                        .with(httpBasic(adminEmail, PASSWORD)))
+                        .with(authenticatedAs(adminEmail)))
                 .andExpect(status().isNoContent());
         mockMvc.perform(delete("/api/categories/{id}", categoryId)
-                        .with(httpBasic(adminEmail, PASSWORD)))
+                        .with(authenticatedAs(adminEmail)))
                 .andExpect(status().isNoContent());
         userRepository.deleteByEmailIgnoreCase(adminEmail);
     }
@@ -193,6 +199,7 @@ class CatalogApiIntegrationTests {
     void publicRegistrationCreatesCustomerAndOnlyAdminCanWriteCatalog() throws Exception {
         String email = "customer-" + UUID.randomUUID() + "@example.com";
         mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"firstName":"Test Customer","email":"%s","password":"%s"}
@@ -201,7 +208,7 @@ class CatalogApiIntegrationTests {
                 .andExpect(jsonPath("$.role").value("CUSTOMER"))
                 .andExpect(jsonPath("$.passwordHash").doesNotExist());
 
-        mockMvc.perform(get("/api/auth/me").with(httpBasic(email, PASSWORD)))
+        mockMvc.perform(get("/api/auth/me").with(authenticatedAs(email)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value(email))
                 .andExpect(jsonPath("$.roles[0]").value("ROLE_CUSTOMER"));
@@ -209,13 +216,14 @@ class CatalogApiIntegrationTests {
         mockMvc.perform(get("/api/products"))
                 .andExpect(status().isOk());
         mockMvc.perform(post("/api/categories")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Unauthenticated Category","slug":"unauthenticated-category"}
                                 """))
                 .andExpect(status().isUnauthorized());
         mockMvc.perform(post("/api/categories")
-                        .with(httpBasic(email, PASSWORD))
+                        .with(authenticatedAs(email))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"name":"Customer Category","slug":"customer-category"}
@@ -225,10 +233,63 @@ class CatalogApiIntegrationTests {
     }
 
     @Test
+    void sessionLoginPersistsAndLogoutInvalidatesSessionAndRequiresCsrf() throws Exception {
+        String email = createUser(StoreUser.Role.CUSTOMER);
+        MvcResult csrfResult = mockMvc.perform(get("/api/auth/csrf"))
+                .andExpect(status().isOk())
+                .andReturn();
+        String csrfToken = JsonPath.read(csrfResult.getResponse().getContentAsString(), "$.token");
+        MockHttpSession csrfSession = (MockHttpSession) csrfResult.getRequest().getSession(false);
+        String anonymousSessionId = csrfSession.getId();
+
+        mockMvc.perform(post("/api/auth/login")
+                        .session(csrfSession)
+                        .header("X-XSRF-TOKEN", csrfToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"%s","password":"wrong-password"}
+                                """.formatted(email)))
+                .andExpect(status().isUnauthorized());
+
+        MvcResult loginResult = mockMvc.perform(post("/api/auth/login")
+                        .session(csrfSession)
+                        .header("X-XSRF-TOKEN", csrfToken)
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"email":"%s","password":"%s"}
+                                """.formatted(email, PASSWORD)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.email").value(email))
+                .andReturn();
+        MockHttpSession session = (MockHttpSession) loginResult.getRequest().getSession(false);
+        org.junit.jupiter.api.Assertions.assertNotEquals(anonymousSessionId, session.getId());
+
+        mockMvc.perform(get("/api/auth/me").session(session))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.roles[0]").value("ROLE_CUSTOMER"));
+        mockMvc.perform(get("/api/auth/me"))
+                .andExpect(status().isUnauthorized());
+        String basicCredentials = Base64.getEncoder().encodeToString(
+                (email + ":" + PASSWORD).getBytes(StandardCharsets.UTF_8));
+        mockMvc.perform(get("/api/auth/me").header("Authorization", "Basic " + basicCredentials))
+                .andExpect(status().isUnauthorized());
+        mockMvc.perform(post("/api/auth/logout").session(session))
+                .andExpect(status().isForbidden());
+
+        mockMvc.perform(post("/api/auth/logout")
+                        .session(session)
+                        .header("X-XSRF-TOKEN", csrfToken))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(get("/api/auth/me").session(session))
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
     void registrationRejectsDuplicateEmailCaseInsensitively() throws Exception {
         String email = "duplicate-" + UUID.randomUUID() + "@example.com";
         register(email);
         mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"firstName":"Duplicate","email":"%s","password":"%s"}
@@ -265,14 +326,14 @@ class CatalogApiIntegrationTests {
                     .andExpect(status().isNotFound());
 
             mockMvc.perform(post("/api/products")
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"categoryId":1,"name":"Invalid price","price":-0.01}
                                     """))
                     .andExpect(status().isBadRequest());
             mockMvc.perform(post("/api/products")
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"categoryId":999999999,"name":"Missing category","price":1}
@@ -283,7 +344,7 @@ class CatalogApiIntegrationTests {
                     {"name":"Boundary Category %s","slug":"boundary-category-%s"}
                     """.formatted(UUID.randomUUID(), UUID.randomUUID());
             String categoryResponse = mockMvc.perform(post("/api/categories")
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(categoryBody))
                     .andExpect(status().isCreated())
@@ -291,7 +352,7 @@ class CatalogApiIntegrationTests {
             categoryId = JsonPath.read(categoryResponse, "$.id");
 
             mockMvc.perform(post("/api/categories/{id}/attributes", categoryId)
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"name":"Choice","dataType":"SELECT","options":[]}
@@ -303,7 +364,7 @@ class CatalogApiIntegrationTests {
                      "required":false,"filterable":true,"displayOrder":0}
                     """;
             String attributeResponse = mockMvc.perform(post("/api/categories/{id}/attributes", categoryId)
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(attributeBody))
                     .andExpect(status().isCreated())
@@ -311,7 +372,7 @@ class CatalogApiIntegrationTests {
             attributeId = JsonPath.read(attributeResponse, "$.id");
 
             mockMvc.perform(post("/api/categories/{id}/attributes", categoryId)
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content(attributeBody))
                     .andExpect(status().isConflict());
@@ -320,7 +381,7 @@ class CatalogApiIntegrationTests {
                     .andExpect(status().isNotFound());
 
             mockMvc.perform(post("/api/products")
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"categoryId":%d,"name":"Wrong attribute type","price":1,
@@ -329,7 +390,7 @@ class CatalogApiIntegrationTests {
                     .andExpect(status().isBadRequest());
 
             String productResponse = mockMvc.perform(post("/api/products")
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"categoryId":%d,"name":"Boundary Product %s","price":0,
@@ -343,7 +404,7 @@ class CatalogApiIntegrationTests {
             mockMvc.perform(get("/api/products/{id}", 999999999))
                     .andExpect(status().isNotFound());
             mockMvc.perform(post("/api/products/{id}/images", productId)
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"imageUrl":"https://example.com/duplicate.jpg",
@@ -351,7 +412,7 @@ class CatalogApiIntegrationTests {
                                     """))
                     .andExpect(status().isConflict());
             mockMvc.perform(put("/api/products/{id}/images", productId)
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"images":[
@@ -361,7 +422,7 @@ class CatalogApiIntegrationTests {
                                     """))
                     .andExpect(status().isBadRequest());
             mockMvc.perform(put("/api/products/{id}/images", productId)
-                            .with(httpBasic(adminEmail, PASSWORD))
+                            .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)
                             .content("""
                                     {"images":[
@@ -375,18 +436,18 @@ class CatalogApiIntegrationTests {
         } finally {
             if (productId != null) {
                 mockMvc.perform(delete("/api/products/{id}", productId)
-                                .with(httpBasic(adminEmail, PASSWORD)))
+                                .with(authenticatedAs(adminEmail)))
                         .andExpect(status().isNoContent());
             }
             if (attributeId != null) {
                 mockMvc.perform(delete("/api/categories/{categoryId}/attributes/{attributeId}",
                                 categoryId, attributeId)
-                                .with(httpBasic(adminEmail, PASSWORD)))
+                                .with(authenticatedAs(adminEmail)))
                         .andExpect(status().isNoContent());
             }
             if (categoryId != null) {
                 mockMvc.perform(delete("/api/categories/{id}", categoryId)
-                                .with(httpBasic(adminEmail, PASSWORD)))
+                                .with(authenticatedAs(adminEmail)))
                         .andExpect(status().isNoContent());
             }
             userRepository.deleteByEmailIgnoreCase(adminEmail);
@@ -400,8 +461,15 @@ class CatalogApiIntegrationTests {
         return email;
     }
 
+    private RequestPostProcessor authenticatedAs(String email) {
+        StoreUser storeUser = userRepository.findByEmailIgnoreCase(email).orElseThrow();
+        return request -> csrf().postProcessRequest(
+                user(email).roles(storeUser.getRole().name()).postProcessRequest(request));
+    }
+
     private void register(String email) throws Exception {
         mockMvc.perform(post("/api/auth/register")
+                        .with(csrf())
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
                                 {"firstName":"Test","email":"%s","password":"%s"}

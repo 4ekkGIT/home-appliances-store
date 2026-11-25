@@ -12,6 +12,9 @@ import Orders from './pages/Orders'
 import ProductDetails from './pages/ProductDetails'
 import Footer from './components/Footer'
 import Wishlist from './pages/Wishlist'
+import Register from './pages/Register'
+import ProtectedRoute from './components/ProtectedRoute'
+import ForgotPassword from './pages/ForgotPassword'
 
 const App = () => {
   return (
@@ -27,9 +30,17 @@ const App = () => {
           <Route path="/contact" element={<Contact />} />
           <Route path="/cart" element={<Cart />} />
           <Route path="/login" element={<Login />} />
-          <Route path="/place-order" element={<PlaceOrder />} />
-          <Route path="/orders" element={<Orders />} />
+          <Route
+            path="/place-order"
+            element={<ProtectedRoute><PlaceOrder /></ProtectedRoute>}
+          />
+          <Route
+            path="/orders"
+            element={<ProtectedRoute><Orders /></ProtectedRoute>}
+          />
           <Route path="/wishlist" element={<Wishlist />} />
+          <Route path="/register" element={<Register />} />
+          <Route path="/forgot-password" element={<ForgotPassword />} />  
         </Routes>
 
         <Footer />
