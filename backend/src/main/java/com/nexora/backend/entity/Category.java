@@ -23,6 +23,9 @@ public class Category {
     @Column(columnDefinition = "TEXT")
     private String description;
 
+    @Column(name = "image_url", length = 500)
+    private String imageUrl;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -35,10 +38,20 @@ public class Category {
         this.description = description;
     }
 
+    public Category(String name, String slug, String description, String imageUrl) {
+        this(name, slug, description);
+        this.imageUrl = imageUrl;
+    }
+
     public void updateDetails(String name, String slug, String description) {
+        updateDetails(name, slug, description, imageUrl);
+    }
+
+    public void updateDetails(String name, String slug, String description, String imageUrl) {
         this.name = name;
         this.slug = slug;
         this.description = description;
+        this.imageUrl = imageUrl;
     }
 
     @PrePersist

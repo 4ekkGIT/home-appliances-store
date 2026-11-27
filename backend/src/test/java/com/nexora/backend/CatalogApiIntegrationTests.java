@@ -11,6 +11,7 @@ import org.springframework.mock.web.MockHttpSession;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.request.RequestPostProcessor;
 import org.springframework.test.web.servlet.MvcResult;
@@ -43,6 +44,9 @@ class CatalogApiIntegrationTests {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+        @Autowired
+        private JdbcTemplate jdbcTemplate;
+
     @MockitoBean
     private JavaMailSender mailSender;
 
@@ -54,11 +58,23 @@ class CatalogApiIntegrationTests {
                         .with(authenticatedAs(adminEmail))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"API Category %s","slug":"api-category-%s"}
+                                {"name":"API Category %s","slug":"api-category-%s",
+                                 "imageUrl":"https://example.com/category.jpg"}
                                 """.formatted(UUID.randomUUID(), UUID.randomUUID())))
                 .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.imageUrl").value("https://example.com/category.jpg"))
                 .andReturn().getResponse().getContentAsString();
         int categoryId = JsonPath.read(categoryResponse, "$.id");
+
+        mockMvc.perform(put("/api/categories/{id}", categoryId)
+                        .with(authenticatedAs(adminEmail))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"name":"Updated API Category","slug":"updated-api-category",
+                                 "description":"Updated category","imageUrl":"https://example.com/category-updated.jpg"}
+                                """))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.imageUrl").value("https://example.com/category-updated.jpg"));
 
         String attributeBody = """
                 {"name":"Capacity","slug":"capacity","dataType":"NUMBER","unit":"L",
@@ -104,6 +120,20 @@ class CatalogApiIntegrationTests {
                 .andReturn().getResponse().getContentAsString();
         int productId = JsonPath.read(productResponse, "$.id");
         int imageId = JsonPath.read(productResponse, "$.images[0].id");
+
+        String warehouseResponse = mockMvc.perform(get("/api/warehouses"))
+                .andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString();
+        int warehouseId = JsonPath.read(warehouseResponse, "$[0].id");
+        String unitResponse = mockMvc.perform(post("/api/inventory/units")
+                        .with(authenticatedAs(adminEmail))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"productId":%d,"warehouseId":%d}
+                                """.formatted(productId, warehouseId)))
+                .andExpect(status().isCreated())
+                .andReturn().getResponse().getContentAsString();
+        int unitId = JsonPath.read(unitResponse, "$.id");
 
         mockMvc.perform(get("/api/products")
                         .param("q", "Integration search target")
@@ -183,6 +213,20 @@ class CatalogApiIntegrationTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].altText").value("Final"));
 
+        mockMvc.perform(put("/api/products/{id}", productId)
+                        .with(authenticatedAs(adminEmail))
+                        .contentType(MediaType.APPLICATION_JSON)
+                        .content("""
+                                {"categoryId":%d,"name":"Updated API Product","slug":"updated-api-product",
+                                 "description":"Updated product parameters","price":175,"active":true,
+                                 "images":[{"imageUrl":"https://example.com/updated-product.jpg",
+                                            "altText":"Updated product","displayOrder":0,"primary":true}]}
+                                """.formatted(categoryId)))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.name").value("Updated API Product"))
+                .andExpect(jsonPath("$.price").value(175))
+                .andExpect(jsonPath("$.images[0].imageUrl").value("https://example.com/updated-product.jpg"));
+
         if (userRepository.findByEmailIgnoreCase(adminEmail).isEmpty()) {
             throw new AssertionError("Admin account disappeared during catalog operations");
         }
@@ -191,9 +235,16 @@ class CatalogApiIntegrationTests {
         mockMvc.perform(delete("/api/categories/{categoryId}/attributes/{attributeId}", categoryId, attributeId)
                         .with(authenticatedAs(adminEmail)))
                 .andExpect(status().isNoContent());
-        mockMvc.perform(delete("/api/products/{id}", productId)
+        mockMvc.perform(delete("/api/products/{id}/permanent", productId)
                         .with(authenticatedAs(adminEmail)))
                 .andExpect(status().isNoContent());
+        org.junit.jupiter.api.Assertions.assertEquals(0L,
+                jdbcTemplate.queryForObject("SELECT count(*) FROM product_units WHERE id = ?", Long.class, unitId));
+        org.junit.jupiter.api.Assertions.assertEquals(0L,
+                jdbcTemplate.queryForObject("SELECT count(*) FROM inventory_movements WHERE product_unit_id = ?",
+                        Long.class, unitId));
+        mockMvc.perform(get("/api/products/{id}", productId))
+                .andExpect(status().isNotFound());
         mockMvc.perform(delete("/api/categories/{id}", categoryId)
                         .with(authenticatedAs(adminEmail)))
                 .andExpect(status().isNoContent());

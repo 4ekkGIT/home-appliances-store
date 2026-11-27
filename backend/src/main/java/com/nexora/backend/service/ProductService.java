@@ -23,6 +23,7 @@ import com.nexora.backend.repository.ProductSpecifications;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
 import org.springframework.http.HttpStatus;
+import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -44,6 +45,7 @@ public class ProductService {
     private final ProductImageRepository productImageRepository;
     private final BrandRepository brandRepository;
     private final SlugService slugService;
+    private final JdbcTemplate jdbcTemplate;
 
     public ProductService(ProductRepository productRepository,
                           CategoryRepository categoryRepository,
@@ -51,7 +53,8 @@ public class ProductService {
                           ProductAttributeValueRepository productAttributeValueRepository,
                           ProductImageRepository productImageRepository,
                           BrandRepository brandRepository,
-                          SlugService slugService) {
+                          SlugService slugService,
+                          JdbcTemplate jdbcTemplate) {
         this.productRepository = productRepository;
         this.categoryRepository = categoryRepository;
         this.categoryAttributeRepository = categoryAttributeRepository;
@@ -59,6 +62,7 @@ public class ProductService {
         this.productImageRepository = productImageRepository;
         this.brandRepository = brandRepository;
         this.slugService = slugService;
+        this.jdbcTemplate = jdbcTemplate;
     }
 
     @Transactional(readOnly = true)
@@ -272,7 +276,27 @@ public class ProductService {
 
     @Transactional
     public void delete(Long id) {
-        productRepository.delete(getProduct(id));
+        Product product = getProduct(id);
+        if (productRepository.hasInventoryOrOrderReferences(id)) {
+            product.archive();
+        } else {
+            productRepository.delete(product);
+        }
+    }
+
+    @Transactional
+    public void deletePermanently(Long id) {
+        Product product = getProduct(id);
+        if (productRepository.hasOrderReferences(id)) {
+            throw new ResponseStatusException(HttpStatus.CONFLICT,
+                    "Product has order history and can only be archived");
+        }
+
+        jdbcTemplate.update("DELETE FROM inventory_movements WHERE product_unit_id IN " +
+                "(SELECT id FROM product_units WHERE product_id = ?)", id);
+        jdbcTemplate.update("DELETE FROM product_units WHERE product_id = ?", id);
+        jdbcTemplate.update("DELETE FROM cart_items WHERE product_id = ?", id);
+        productRepository.delete(product);
     }
 
     private String getUniqueSlug(String requestedSlug, String name) {

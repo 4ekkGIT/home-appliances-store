@@ -6,6 +6,8 @@ import com.nexora.backend.dto.InventoryStatusRequest;
 import com.nexora.backend.dto.InventoryTransferRequest;
 import com.nexora.backend.dto.ProductUnitRequest;
 import com.nexora.backend.dto.ProductUnitResponse;
+import com.nexora.backend.dto.StockAdjustmentRequest;
+import com.nexora.backend.dto.StockAdjustmentResponse;
 import com.nexora.backend.entity.InventoryMovement;
 import com.nexora.backend.entity.Product;
 import com.nexora.backend.entity.ProductUnit;
@@ -197,6 +199,47 @@ public class InventoryService {
                 : unitRepository.countByProductIdAndWarehouseIdAndStatus(
                         productId, warehouseId, ProductUnit.Status.AVAILABLE);
         return new AvailableStockResponse(productId, warehouseId, quantity);
+    }
+
+    @Transactional
+    public StockAdjustmentResponse setAvailableStock(StockAdjustmentRequest request,
+                                                     Authentication authentication) {
+        Product product = productRepository.findByIdForUpdate(request.productId())
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Product not found"));
+        Warehouse warehouse = getActiveWarehouse(request.warehouseId());
+        List<ProductUnit> availableUnits = unitRepository.findAvailableByProductAndWarehouseForUpdate(
+                product.getId(), warehouse.getId());
+        long previousQuantity = availableUnits.size();
+        int targetQuantity = request.availableQuantity();
+        StoreUser actor = getActor(authentication);
+
+        if (targetQuantity < previousQuantity) {
+            List<ProductUnit> unitsToWriteOff = availableUnits.subList(targetQuantity, availableUnits.size());
+            for (ProductUnit unit : unitsToWriteOff) {
+                unit.changeStatus(ProductUnit.Status.WRITTEN_OFF);
+                unitRepository.save(unit);
+                movementRepository.save(new InventoryMovement(
+                        unit, warehouse, null, null, actor,
+                        InventoryMovement.MovementType.WRITE_OFF,
+                        ProductUnit.Status.AVAILABLE, ProductUnit.Status.WRITTEN_OFF,
+                        "Manual available stock adjustment"
+                ));
+            }
+        } else {
+            for (long index = previousQuantity; index < targetQuantity; index += 1) {
+                ProductUnit unit = new ProductUnit(product, warehouse, generateInventoryCode(product), null);
+                unit = unitRepository.save(unit);
+                movementRepository.save(new InventoryMovement(
+                        unit, null, warehouse, null, actor,
+                        InventoryMovement.MovementType.RECEIPT,
+                        null, ProductUnit.Status.AVAILABLE,
+                        "Manual available stock adjustment"
+                ));
+            }
+        }
+
+        return new StockAdjustmentResponse(product.getId(), warehouse.getId(),
+                previousQuantity, targetQuantity);
     }
 
     private ProductUnit getUnit(Long id) {

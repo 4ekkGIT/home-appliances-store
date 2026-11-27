@@ -25,6 +25,7 @@ import java.util.UUID;
 
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.csrf;
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
@@ -61,6 +62,11 @@ class OrderApiIntegrationTests {
         return request -> csrf().postProcessRequest(
                 user(email).roles("CUSTOMER").postProcessRequest(request));
     }
+
+        private RequestPostProcessor authenticatedAdmin() {
+                return request -> csrf().postProcessRequest(user("catalog-admin@example.com").roles("ADMIN")
+                                .postProcessRequest(request));
+        }
 
     @Test
     void createsOrderAndReservesStockThenRejectsAnUnavailableItem() throws Exception {
@@ -120,6 +126,19 @@ class OrderApiIntegrationTests {
 
             org.junit.jupiter.api.Assertions.assertEquals(
                     ProductUnit.Status.RESERVED, unitRepository.findById(unit.getId()).orElseThrow().getStatus());
+
+            mockMvc.perform(delete("/api/products/{id}/permanent", product.getId())
+                            .with(authenticatedAdmin()))
+                    .andExpect(status().isConflict());
+
+            mockMvc.perform(delete("/api/products/{id}", product.getId())
+                            .with(authenticatedAdmin()))
+                    .andExpect(status().isNoContent());
+            org.junit.jupiter.api.Assertions.assertFalse(
+                    productRepository.findById(product.getId()).orElseThrow().getActive());
+            org.junit.jupiter.api.Assertions.assertEquals(1L,
+                    jdbcTemplate.queryForObject("SELECT count(*) FROM orders WHERE user_id = ?",
+                            Long.class, customer.getId()));
         } finally {
             jdbcTemplate.update("DELETE FROM inventory_movements WHERE order_id IN " +
                     "(SELECT id FROM orders WHERE user_id = ?)", customer.getId());

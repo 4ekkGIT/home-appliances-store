@@ -111,6 +111,7 @@ const Navbar = () => {
                 {user ? (
                   <>
                     <span className="max-w-48 truncate text-gray-900">{user.email}</span>
+                    {user.roles?.includes('ROLE_ADMIN') && <Link to="/admin" className="hover:text-black">Store admin</Link>}
                     <button type="button" onClick={openLogoutConfirmation} className="text-left hover:text-black">Sign Out</button>
                   </>
                 ) : (
@@ -153,6 +154,7 @@ const Navbar = () => {
           {user ? (
             <>
               <span className="truncate text-gray-500">{user.email}</span>
+              {user.roles?.includes('ROLE_ADMIN') && <Link to="/admin" onClick={() => setVisible(false)}>Store admin</Link>}
               <button type="button" onClick={openLogoutConfirmation} className="text-left">Sign Out</button>
             </>
           ) : (

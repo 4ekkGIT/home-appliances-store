@@ -21,6 +21,13 @@ public interface ProductUnitRepository extends JpaRepository<ProductUnit, Long> 
     List<ProductUnit> findAllByOrderByIdDesc();
 
     @Query(value = "SELECT * FROM product_units WHERE product_id = :productId " +
+            "AND warehouse_id = :warehouseId AND status = 'AVAILABLE' ORDER BY id FOR UPDATE",
+            nativeQuery = true)
+    List<ProductUnit> findAvailableByProductAndWarehouseForUpdate(
+            @Param("productId") Long productId,
+            @Param("warehouseId") Long warehouseId);
+
+    @Query(value = "SELECT * FROM product_units WHERE product_id = :productId " +
             "AND status = 'AVAILABLE' ORDER BY id LIMIT :quantity FOR UPDATE", nativeQuery = true)
     List<ProductUnit> findAvailableForUpdate(@Param("productId") Long productId,
                                              @Param("quantity") int quantity);

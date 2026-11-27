@@ -16,6 +16,7 @@ import Register from './pages/Register'
 import ProtectedRoute from './components/ProtectedRoute'
 import ForgotPassword from './pages/ForgotPassword'
 import VerifyEmail from './pages/VerifyEmail'
+import AdminPage from './pages/admin/AdminPage'
 
 const App = () => {
   return (
@@ -43,6 +44,7 @@ const App = () => {
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />  
           <Route path="/verify-email" element={<VerifyEmail />} />
+          <Route path="/admin" element={<ProtectedRoute requiredRole="ROLE_ADMIN"><AdminPage /></ProtectedRoute>} />
         </Routes>
 
         <Footer />

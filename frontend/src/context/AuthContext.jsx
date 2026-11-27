@@ -66,10 +66,17 @@ export const AuthProvider = ({ children }) => {
       return currentUser
     } catch (error) {
       if (error.status === 401) {
-        if (error.message !== 'Invalid email or password') {
+        if (error.message === 'Invalid email or password'
+          || /^request failed \(401\)\.?$/i.test(error.message)) {
+          throw new Error(
+            'Email or password is incorrect. Confirm the customer email if needed. For the admin account, changing ADMIN_PASSWORD in .env after the first startup does not change its saved password; use the original one.',
+            { cause: error }
+          )
+        }
+        if (error.message) {
           throw new Error(error.message, { cause: error })
         }
-        throw new Error('Invalid email or password', { cause: error })
+        throw new Error('Email or password is incorrect.', { cause: error })
       }
       if (!error.status) {
         throw new Error('Cannot reach the server. Please try again later', {

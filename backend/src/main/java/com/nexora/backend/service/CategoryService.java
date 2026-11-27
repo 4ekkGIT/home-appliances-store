@@ -36,7 +36,7 @@ public class CategoryService {
                 ? slugService.toSlug(name) : slugService.toSlug(request.slug());
         ensureNameAvailable(name, null);
         ensureSlugAvailable(slug, null);
-        Category category = new Category(name, slug, request.description());
+        Category category = new Category(name, slug, request.description(), trimToNull(request.imageUrl()));
         return CategoryResponse.from(repository.save(category));
     }
 
@@ -48,7 +48,7 @@ public class CategoryService {
                 ? slugService.toSlug(name) : slugService.toSlug(request.slug());
         ensureNameAvailable(name, id);
         ensureSlugAvailable(slug, id);
-        category.updateDetails(name, slug, request.description());
+        category.updateDetails(name, slug, request.description(), trimToNull(request.imageUrl()));
         return CategoryResponse.from(repository.save(category));
     }
 
@@ -78,5 +78,9 @@ public class CategoryService {
         if (exists) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "Category slug already exists");
         }
+    }
+
+    private String trimToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }

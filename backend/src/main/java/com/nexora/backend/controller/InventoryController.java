@@ -6,6 +6,8 @@ import com.nexora.backend.dto.InventoryStatusRequest;
 import com.nexora.backend.dto.InventoryTransferRequest;
 import com.nexora.backend.dto.ProductUnitRequest;
 import com.nexora.backend.dto.ProductUnitResponse;
+import com.nexora.backend.dto.StockAdjustmentRequest;
+import com.nexora.backend.dto.StockAdjustmentResponse;
 import com.nexora.backend.service.InventoryService;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.NotNull;
@@ -17,6 +19,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -73,5 +76,13 @@ public class InventoryController {
             @RequestParam(required = false) Long warehouseId
     ) {
         return service.getAvailableStock(productId, warehouseId);
+    }
+
+    @PutMapping("/stock")
+    public StockAdjustmentResponse setAvailableStock(
+            @Valid @RequestBody StockAdjustmentRequest request,
+            Authentication authentication
+    ) {
+        return service.setAvailableStock(request, authentication);
     }
 }

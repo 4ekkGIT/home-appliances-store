@@ -74,6 +74,10 @@ public class Product {
         this.active = active;
     }
 
+    public void archive() {
+        this.active = false;
+    }
+
     @PrePersist
     private void onCreate() {
         LocalDateTime now = LocalDateTime.now();

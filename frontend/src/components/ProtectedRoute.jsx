@@ -1,7 +1,7 @@
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 
-const ProtectedRoute = ({ children }) => {
+const ProtectedRoute = ({ children, requiredRole }) => {
   const { user, isLoading, authError, checkSession } = useAuth()
   const location = useLocation()
 
@@ -26,6 +26,15 @@ const ProtectedRoute = ({ children }) => {
 
   if (!user) {
     return <Navigate to="/login" replace state={{ from: location }} />
+  }
+
+  if (requiredRole && !user.roles?.includes(requiredRole)) {
+    return (
+      <div role="alert" className="mx-auto max-w-xl py-16 text-center">
+        <h1 className="text-xl font-semibold text-gray-950">Access denied</h1>
+        <p className="mt-2 text-sm text-gray-600">This page is available to store administrators only.</p>
+      </div>
+    )
   }
 
   return children

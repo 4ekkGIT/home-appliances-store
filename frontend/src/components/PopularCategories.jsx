@@ -66,8 +66,8 @@ const PopularCategories = () => {
                 {category.name}
               </span>
               <img
-                src={getCategoryImage(category)}
-                alt=""
+                src={category.imageUrl || getCategoryImage(category)}
+                alt={category.imageUrl ? category.name : ''}
                 loading="lazy"
                 className="h-24 w-24 shrink-0 object-contain transition-transform duration-300 group-hover:scale-105 sm:h-32 sm:w-32"
               />
