@@ -28,7 +28,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
-import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -287,15 +286,21 @@ public class ProductService {
     @Transactional
     public void deletePermanently(Long id) {
         Product product = getProduct(id);
-        if (productRepository.hasOrderReferences(id)) {
+        if (productRepository.hasActiveOrderReferences(id)) {
             throw new ResponseStatusException(HttpStatus.CONFLICT,
-                    "Product has order history and can only be archived");
+                    "Product is part of an active order and cannot be permanently deleted");
         }
-
         jdbcTemplate.update("DELETE FROM inventory_movements WHERE product_unit_id IN " +
                 "(SELECT id FROM product_units WHERE product_id = ?)", id);
+        jdbcTemplate.update("DELETE FROM order_item_units WHERE product_id = ?", id);
         jdbcTemplate.update("DELETE FROM product_units WHERE product_id = ?", id);
+        jdbcTemplate.update("UPDATE order_items SET product_id = NULL WHERE product_id = ?", id);
         jdbcTemplate.update("DELETE FROM cart_items WHERE product_id = ?", id);
+        productImageRepository.deleteAll(productImageRepository.findAllByProductIdOrderByDisplayOrder(id));
+        productImageRepository.flush();
+        productAttributeValueRepository.deleteAll(
+            productAttributeValueRepository.findAllByProductIdOrderByAttribute_DisplayOrderAsc(id));
+        productAttributeValueRepository.flush();
         productRepository.delete(product);
     }
 

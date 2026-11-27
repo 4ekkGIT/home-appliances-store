@@ -34,6 +34,9 @@ services:
       MAIL_STARTTLS_ENABLE: ${MAIL_STARTTLS_ENABLE:-false}
       MAIL_FROM: ${MAIL_FROM:-no-reply@nexora.local}
       EMAIL_VERIFICATION_BASE_URL: ${EMAIL_VERIFICATION_BASE_URL:-http://localhost:5173/verify-email}
+      IMAGE_STORAGE_PATH: /data/uploads
+    volumes:
+      - nexora-uploads:/data/uploads
     ports:
       - "127.0.0.1:8080:8080"
     depends_on:
@@ -61,3 +64,4 @@ services:
 
 volumes:
   nexora-data:
+  nexora-uploads:

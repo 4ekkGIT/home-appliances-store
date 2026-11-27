@@ -2,7 +2,9 @@ package com.nexora.backend.controller;
 
 import com.nexora.backend.dto.ProductRequest;
 import com.nexora.backend.dto.ProductResponse;
+import com.nexora.backend.dto.ProductImageResponse;
 import com.nexora.backend.dto.PageResponse;
+import com.nexora.backend.service.ImageStorageService;
 import com.nexora.backend.service.ProductService;
 import jakarta.validation.Valid;
 import org.springframework.http.HttpStatus;
@@ -15,9 +17,11 @@ import java.math.BigDecimal;
 @RequestMapping("/api/products")
 public class ProductController {
     private final ProductService service;
+    private final ImageStorageService imageStorageService;
 
-    public ProductController(ProductService service) {
+    public ProductController(ProductService service, ImageStorageService imageStorageService) {
         this.service = service;
+        this.imageStorageService = imageStorageService;
     }
 
     @GetMapping
@@ -67,6 +71,11 @@ public class ProductController {
     @DeleteMapping("/{id}/permanent")
     @ResponseStatus(HttpStatus.NO_CONTENT)
     public void deletePermanently(@PathVariable Long id) {
+        List<ProductImageResponse> images = service.findImages(id);
         service.deletePermanently(id);
+        images.stream()
+                .map(ProductImageResponse::imageUrl)
+                .filter(url -> url.startsWith("/api/media/images/"))
+                .forEach(imageStorageService::delete);
     }
 }

@@ -1,6 +1,6 @@
 import { useContext, useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Archive, Boxes, PackagePlus, Pencil, Tags, Trash2, X } from 'lucide-react'
+import { Archive, Boxes, ClipboardList, Image, Minus, PackagePlus, Pencil, Settings2, Tags, Trash2, Upload, Warehouse, X } from 'lucide-react'
 import { ShopContext } from '../../context/ShopContext'
 import {
   createCategory,
@@ -15,9 +15,12 @@ import {
   getProducts,
   getWarehouses,
   registerInventoryUnit,
+  setAvailableStock,
+  uploadProductImage,
   updateCategory,
   updateProduct,
 } from '../../api/client'
+import AdminOperations from './AdminOperations'
 
 const fieldClass = 'mt-1.5 w-full rounded-lg border border-gray-300 bg-white px-3 py-2.5 text-sm text-gray-900 outline-none focus:border-gray-700'
 const labelClass = 'block text-sm font-medium text-gray-800'
@@ -47,9 +50,12 @@ const AdminPage = () => {
   const [categoryDescription, setCategoryDescription] = useState('')
   const [categoryImageUrl, setCategoryImageUrl] = useState('')
   const [editingCategoryId, setEditingCategoryId] = useState('')
+  const [categoryDeleteTarget, setCategoryDeleteTarget] = useState(null)
+  const [replacementCategoryId, setReplacementCategoryId] = useState('')
   const [productName, setProductName] = useState('')
   const [productDescription, setProductDescription] = useState('')
-  const [productImageUrl, setProductImageUrl] = useState('')
+  const [productImageFiles, setProductImageFiles] = useState([])
+  const [draggingProductImages, setDraggingProductImages] = useState(false)
   const [productPrice, setProductPrice] = useState('')
   const [productCategory, setProductCategory] = useState('')
   const [productBrand, setProductBrand] = useState('')
@@ -60,6 +66,7 @@ const AdminPage = () => {
   const [stockProduct, setStockProduct] = useState('')
   const [stockWarehouse, setStockWarehouse] = useState('')
   const [stockQuantity, setStockQuantity] = useState('1')
+  const [warehouseAvailability, setWarehouseAvailability] = useState(null)
 
   useEffect(() => {
     let active = true
@@ -95,6 +102,25 @@ const AdminPage = () => {
 
     return () => { active = false }
   }, [refreshKey])
+
+  useEffect(() => {
+    if (!stockProduct || !stockWarehouse) return
+    let active = true
+    getAvailableStock(stockProduct, stockWarehouse)
+      .then((availability) => {
+        if (active) setWarehouseAvailability({
+          productId: Number(stockProduct),
+          warehouseId: Number(stockWarehouse),
+          quantity: availability.availableQuantity,
+        })
+      })
+      .catch((requestError) => {
+        if (!active) return
+        setNotice('')
+        setError(requestError.message)
+      })
+    return () => { active = false }
+  }, [stockProduct, stockWarehouse, refreshKey])
 
   const showError = (requestError) => {
     setNotice('')
@@ -149,15 +175,19 @@ const AdminPage = () => {
   }
 
   const handleDeleteCategory = async (category) => {
-    const productCount = products.filter((product) => product.categoryId === category.id).length
-    if (productCount > 0) return
-    if (!window.confirm(`Delete category “${category.name}”?`)) return
-    setBusy(true)
     setError('')
     setNotice('')
     try {
+      const productPage = await getProducts({ categoryId: category.id, page: 0, size: 1 })
+      if (productPage.totalElements > 0) {
+        const replacement = categories.find((item) => item.id !== category.id)
+        setCategoryDeleteTarget({ category, productCount: productPage.totalElements })
+        setReplacementCategoryId(String(replacement?.id || ''))
+        return
+      }
+      if (!window.confirm(`Delete empty category “${category.name}”?`)) return
+      setBusy(true)
       await deleteCategory(category.id)
-      if (editingCategoryId === String(category.id)) cancelEditCategory()
       setNotice(`Category “${category.name}” deleted.`)
       setRefreshKey((value) => value + 1)
       await loadCatalog()
@@ -166,6 +196,49 @@ const AdminPage = () => {
     } finally {
       setBusy(false)
     }
+  }
+
+  const confirmDeleteCategory = async (event) => {
+    event.preventDefault()
+    if (!categoryDeleteTarget || !replacementCategoryId) return
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      await deleteCategory(categoryDeleteTarget.category.id, replacementCategoryId)
+      setNotice(`${categoryDeleteTarget.productCount} product${categoryDeleteTarget.productCount === 1 ? '' : 's'} moved to the selected category. “${categoryDeleteTarget.category.name}” deleted.`)
+      setCategoryDeleteTarget(null)
+      setReplacementCategoryId('')
+      if (editingCategoryId === String(categoryDeleteTarget.category.id)) cancelEditCategory()
+      setRefreshKey((value) => value + 1)
+      await loadCatalog()
+    } catch (requestError) {
+      showError(requestError)
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const addProductImageFiles = async (fileList) => {
+    const accepted = []
+    const rejected = []
+    for (const file of Array.from(fileList)) {
+      if (!['image/png', 'image/jpeg', 'image/gif', 'image/webp'].includes(file.type)) {
+        rejected.push(`${file.name}: unsupported format`)
+      } else if (file.size > 10 * 1024 * 1024) {
+        rejected.push(`${file.name}: file exceeds 10 MB`)
+      } else {
+        accepted.push(file)
+      }
+    }
+    const previews = await Promise.all(accepted.map((file) => new Promise((resolve) => {
+      const reader = new FileReader()
+      reader.onload = () => resolve({ file, preview: reader.result })
+      reader.onerror = () => resolve(null)
+      reader.readAsDataURL(file)
+    })))
+    setProductImageFiles((current) => [...current, ...previews.filter(Boolean)])
+    setError(rejected.join('. '))
   }
 
   const addUnits = async (productId, warehouseId, quantity) => {
@@ -186,7 +259,7 @@ const AdminPage = () => {
   const resetProductForm = () => {
     setProductName('')
     setProductDescription('')
-    setProductImageUrl('')
+    setProductImageFiles([])
     setProductPrice('')
     setInitialStock('1')
     setProductBrand('')
@@ -198,7 +271,7 @@ const AdminPage = () => {
     setEditingProductId(product._id)
     setProductName(product.name)
     setProductDescription(product.description || '')
-    setProductImageUrl(product.image?.[0] || '')
+    setProductImageFiles([])
     setProductPrice(String(product.price))
     setProductCategory(String(product.categoryId))
     setProductBrand(product.brandName || '')
@@ -229,30 +302,45 @@ const AdminPage = () => {
         description: productDescription.trim(),
         price: Number(productPrice),
         active: productActive,
-        images: productImageUrl.trim()
-          ? [{ imageUrl: productImageUrl.trim(), altText: productName.trim(), displayOrder: 0, primary: true }]
-          : [],
       }
-      created = editingProductId
+      const wasEditing = Boolean(editingProductId)
+      if (!wasEditing) productRequest.images = []
+      created = wasEditing
         ? await updateProduct(editingProductId, productRequest)
         : await createProduct(productRequest)
-      if (editingProductId) {
-        setNotice(`Product “${created.name}” updated.`)
-        resetProductForm()
+
+      const failedImageFiles = []
+      for (const imageEntry of productImageFiles) {
+        try {
+          await uploadProductImage(created.id, imageEntry.file)
+        } catch (requestError) {
+          failedImageFiles.push(imageEntry)
+          setError(requestError.message)
+        }
+      }
+      setProductImageFiles(failedImageFiles)
+
+      let stockResult = { added: 0, error: '' }
+      if (!wasEditing && Number(initialStock) > 0) {
+        stockResult = await addUnits(created.id, productWarehouse, Number(initialStock))
+      }
+
+      const saveSummary = wasEditing
+        ? `Product “${created.name}” updated.`
+        : `Product “${created.name}” created with ${stockResult.added} available unit${stockResult.added === 1 ? '' : 's'}.`
+      if (failedImageFiles.length > 0) {
+        if (!wasEditing) setEditingProductId(String(created.id))
+        setNotice(`${saveSummary} ${failedImageFiles.length} image${failedImageFiles.length === 1 ? '' : 's'} could not be uploaded. Retry the remaining files below.${stockResult.error ? ` ${stockResult.error}` : ''}`)
         setRefreshKey((value) => value + 1)
         return
       }
-      let stockResult = { added: 0, error: '' }
-      if (Number(initialStock) > 0) {
-        stockResult = await addUnits(created.id, productWarehouse, Number(initialStock))
-        if (stockResult.error) {
-          setNotice(`Product created; ${stockResult.added} of ${initialStock} stock units were added. ${stockResult.error}`)
-          resetProductForm()
-          setRefreshKey((value) => value + 1)
-          return
-        }
+      if (stockResult.error) {
+        setNotice(`${saveSummary} ${stockResult.error}`)
+        if (!wasEditing) resetProductForm()
+        setRefreshKey((value) => value + 1)
+        return
       }
-      setNotice(`Product “${created.name}” created with ${stockResult.added} available unit${stockResult.added === 1 ? '' : 's'}.`)
+      setNotice(saveSummary)
       resetProductForm()
       setRefreshKey((value) => value + 1)
     } catch (requestError) {
@@ -280,14 +368,14 @@ const AdminPage = () => {
   }
 
   const handleDeleteProductPermanently = async (product) => {
-    if (!window.confirm(`Permanently delete “${product.name}” and its stock units and movement history? This cannot be undone. Products with order history cannot be permanently deleted.`)) return
+    if (!window.confirm(`Permanently delete “${product.name}”, its images, stock units, and movement history? Existing orders will keep the product name, quantity, and price, but will no longer link to this catalog item. Products in active orders cannot be deleted. This cannot be undone.`)) return
     setBusy(true)
     setError('')
     setNotice('')
     try {
       await deleteProductPermanently(product._id)
       if (editingProductId === product._id) resetProductForm()
-      setNotice(`Product “${product.name}” and its stock records were permanently deleted.`)
+      setNotice(`Product “${product.name}”, its images, and stock records were permanently deleted. Historical order details were preserved.`)
       setRefreshKey((value) => value + 1)
     } catch (requestError) {
       showError(requestError)
@@ -316,9 +404,47 @@ const AdminPage = () => {
     }
   }
 
+  const handleRemoveStock = async () => {
+    const available = warehouseAvailability?.productId === Number(stockProduct)
+      && warehouseAvailability?.warehouseId === Number(stockWarehouse)
+      ? warehouseAvailability.quantity
+      : null
+    const quantity = Number(stockQuantity)
+    const product = products.find((item) => item._id === stockProduct)
+    const warehouse = warehouses.find((item) => String(item.id) === stockWarehouse)
+    if (available === null || quantity > available) {
+      setError('Removal quantity cannot exceed the available stock in this warehouse.')
+      setNotice('')
+      return
+    }
+    if (!window.confirm(`Remove ${quantity} available unit${quantity === 1 ? '' : 's'} of “${product?.name || 'product'}” from “${warehouse?.name || 'warehouse'}”? The units will be written off and kept in movement history.`)) return
+    setBusy(true)
+    setError('')
+    setNotice('')
+    try {
+      const result = await setAvailableStock({
+        productId: Number(stockProduct),
+        warehouseId: Number(stockWarehouse),
+        availableQuantity: available - quantity,
+      })
+      setNotice(`Removed ${result.previousAvailableQuantity - result.availableQuantity} unit${quantity === 1 ? '' : 's'} from “${product?.name || 'product'}”.`)
+      setRefreshKey((value) => value + 1)
+    } catch (requestError) {
+      showError(requestError)
+    } finally {
+      setBusy(false)
+    }
+  }
+
   const tabs = [
     { id: 'products', label: 'Products', icon: PackagePlus },
     { id: 'stock', label: 'Inventory', icon: Boxes },
+    { id: 'brands', label: 'Brands', icon: Tags },
+    { id: 'attributes', label: 'Specifications', icon: Settings2 },
+    { id: 'images', label: 'Images', icon: Image },
+    { id: 'warehouses', label: 'Warehouses', icon: Warehouse },
+    { id: 'inventory', label: 'Movements', icon: Archive },
+    { id: 'orders', label: 'Orders', icon: ClipboardList },
   ]
 
   return (
@@ -328,7 +454,7 @@ const AdminPage = () => {
           <p className="text-xs font-semibold uppercase text-gray-500">Nexora / Store admin</p>
           <h1 className="mt-2 text-2xl font-semibold text-gray-950">Catalog management</h1>
         </div>
-        <div role="tablist" aria-label="Admin sections" className="flex gap-1 border-b border-gray-200">
+        <div role="tablist" aria-label="Admin sections" className="flex flex-wrap gap-1 border-b border-gray-200">
           {tabs.map(({ id, label, icon: Icon }) => (
             <button
               key={id}
@@ -365,6 +491,14 @@ const AdminPage = () => {
                 {editingCategoryId && <button type="button" onClick={cancelEditCategory} className="flex items-center gap-1 rounded-lg px-3 py-2 text-sm text-gray-600 hover:bg-gray-100"><X size={15} />Cancel</button>}
               </div>
             </form>
+            {categoryDeleteTarget && <form onSubmit={confirmDeleteCategory} className="mt-5 border border-amber-300 bg-amber-50 p-4">
+              <h3 className="text-sm font-semibold text-gray-900">Delete “{categoryDeleteTarget.category.name}”?</h3>
+              <p className="mt-1 text-sm text-gray-700">{categoryDeleteTarget.productCount} product{categoryDeleteTarget.productCount === 1 ? '' : 's'} will move to another category. Their old category-specific values will be removed; products, images, stock, and orders remain.</p>
+              {categories.filter((category) => category.id !== categoryDeleteTarget.category.id).length > 0 ? (
+                <label className={`${labelClass} mt-3`}>Move products to<select required value={replacementCategoryId} onChange={(event) => setReplacementCategoryId(event.target.value)} className={fieldClass}>{categories.filter((category) => category.id !== categoryDeleteTarget.category.id).map((category) => <option key={category.id} value={category.id}>{category.name}</option>)}</select></label>
+              ) : <p className="mt-3 text-sm text-red-800">Create another category before deleting this one.</p>}
+              <div className="mt-3 flex gap-2"><button type="submit" disabled={busy || categories.length < 2} className="rounded-lg bg-red-700 px-3 py-2 text-sm font-medium text-white hover:bg-red-800 disabled:opacity-50">Delete and move products</button><button type="button" onClick={() => setCategoryDeleteTarget(null)} className="rounded-lg border border-gray-300 px-3 py-2 text-sm text-gray-700">Cancel</button></div>
+            </form>}
             <ul className="mt-6 divide-y divide-gray-200 border-y border-gray-200">
               {categories.map((category) => {
                 const productCount = products.filter((product) => product.categoryId === category.id).length
@@ -378,7 +512,7 @@ const AdminPage = () => {
                       <p className="text-xs text-gray-500">{productCount} products</p>
                     </div>
                     <button type="button" onClick={() => beginEditCategory(category)} title={`Edit ${category.name}`} aria-label={`Edit ${category.name}`} className="p-2 text-gray-500 hover:text-gray-950"><Pencil size={16} /></button>
-                    <button type="button" onClick={() => handleDeleteCategory(category)} disabled={busy || productCount > 0} title={productCount > 0 ? 'Move or delete products in this category first' : `Delete ${category.name}`} aria-label={`Delete ${category.name}`} className="p-2 text-gray-500 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-30"><Trash2 size={16} /></button>
+                    <button type="button" onClick={() => handleDeleteCategory(category)} disabled={busy} title={`Delete ${category.name}`} aria-label={`Delete ${category.name}`} className="p-2 text-gray-500 hover:text-red-700 disabled:cursor-not-allowed disabled:opacity-30"><Trash2 size={16} /></button>
                   </li>
                 )
               })}
@@ -398,7 +532,20 @@ const AdminPage = () => {
               <label className={labelClass}>Price ($)<input required type="number" min="0" step="0.01" value={productPrice} onChange={(event) => setProductPrice(event.target.value)} className={fieldClass} /></label>
               {!editingProductId && <label className={labelClass}>Initial stock<input required type="number" min="0" max="100" value={initialStock} onChange={(event) => setInitialStock(event.target.value)} className={fieldClass} /></label>}
               {!editingProductId && Number(initialStock) > 0 && <label className={`${labelClass} sm:col-span-2`}>Warehouse<select required value={productWarehouse} onChange={(event) => setProductWarehouse(event.target.value)} className={fieldClass}><option value="">Choose warehouse</option>{warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}</select></label>}
-              <label className={`${labelClass} sm:col-span-2`}>Image URL <span className="font-normal text-gray-500">(optional)</span><input type="url" maxLength="500" value={productImageUrl} onChange={(event) => setProductImageUrl(event.target.value)} className={fieldClass} /></label>
+              <div
+                onDragOver={(event) => { event.preventDefault(); if (!busy) setDraggingProductImages(true) }}
+                onDragLeave={() => setDraggingProductImages(false)}
+                onDrop={(event) => { event.preventDefault(); setDraggingProductImages(false); if (!busy) addProductImageFiles(event.dataTransfer.files) }}
+                className={`sm:col-span-2 flex min-h-36 flex-col items-center justify-center border border-dashed px-5 py-6 text-center transition-colors ${draggingProductImages ? 'border-gray-950 bg-gray-100' : 'border-gray-300 bg-gray-50'} ${busy ? 'opacity-60' : ''}`}
+              >
+                <Upload size={20} aria-hidden="true" className="text-gray-600" />
+                <p className="mt-2 text-sm font-medium text-gray-800">Перетащите изображения сюда или выберите файлы</p>
+                <label htmlFor="admin-new-product-images" className={`mt-3 cursor-pointer rounded-lg border border-gray-300 bg-white px-3 py-2 text-sm font-medium text-gray-800 hover:bg-gray-100 ${busy ? 'pointer-events-none opacity-50' : ''}`}>Выбрать изображения</label>
+                <input id="admin-new-product-images" type="file" accept="image/png,image/jpeg,image/gif,image/webp" multiple disabled={busy} onChange={(event) => { addProductImageFiles(event.target.files); event.target.value = '' }} className="sr-only" />
+                <p className="mt-2 text-xs text-gray-500">PNG, JPG, GIF, WebP · до 10 МБ на файл</p>
+                {productImageFiles.length > 0 && <div className="mt-4 flex w-full flex-wrap justify-center gap-3">{productImageFiles.map((image, index) => <div key={`${image.file.name}-${image.file.lastModified}-${index}`} className="relative h-20 w-20 border border-gray-300 bg-white p-1"><img src={image.preview} alt={image.file.name} className="h-full w-full object-contain" /><button type="button" disabled={busy} onClick={() => setProductImageFiles((current) => current.filter((_, itemIndex) => itemIndex !== index))} aria-label={`Remove ${image.file.name}`} title={`Remove ${image.file.name}`} className="absolute -right-2 -top-2 bg-white p-1 text-gray-600 shadow hover:text-red-700 disabled:opacity-50"><X size={14} /></button></div>)}</div>}
+                {editingProductId && <p className="mt-3 text-xs text-gray-500">Новые изображения добавятся к существующей галерее.</p>}
+              </div>
               <label className={`${labelClass} sm:col-span-2`}>Description <span className="font-normal text-gray-500">(optional)</span><textarea maxLength="5000" rows="3" value={productDescription} onChange={(event) => setProductDescription(event.target.value)} className={fieldClass} /></label>
               <label className="flex items-center gap-2 text-sm text-gray-700 sm:col-span-2"><input type="checkbox" checked={productActive} onChange={(event) => setProductActive(event.target.checked)} className="h-4 w-4 accent-gray-950" />Available in storefront</label>
               <div className="flex flex-wrap gap-2 sm:col-span-2">
@@ -419,7 +566,7 @@ const AdminPage = () => {
             ) : <p className="mt-3 text-sm text-gray-500">No products to manage yet.</p>}
           </section>
         </div>
-      ) : (
+      ) : activeTab === 'stock' ? (
         <div className="grid gap-10 py-7 lg:grid-cols-[minmax(0,1fr)_320px]">
           <section aria-labelledby="stock-heading">
             <h2 id="stock-heading" className="text-lg font-semibold text-gray-950">Available stock</h2>
@@ -434,15 +581,27 @@ const AdminPage = () => {
           </section>
 
           <section aria-labelledby="restock-heading" className="border-t border-gray-200 pt-7 lg:border-l lg:border-t-0 lg:pl-8 lg:pt-0">
-            <h2 id="restock-heading" className="text-lg font-semibold text-gray-950">Add stock</h2>
+            <h2 id="restock-heading" className="text-lg font-semibold text-gray-950">Adjust stock</h2>
             <form onSubmit={handleAddStock} className="mt-5 grid gap-4">
               <label className={labelClass}>Product<select required value={stockProduct} onChange={(event) => setStockProduct(event.target.value)} className={fieldClass}><option value="">Choose product</option>{products.map((product) => <option key={product._id} value={product._id}>{product.name}</option>)}</select></label>
               <label className={labelClass}>Warehouse<select required value={stockWarehouse} onChange={(event) => setStockWarehouse(event.target.value)} className={fieldClass}><option value="">Choose warehouse</option>{warehouses.map((warehouse) => <option key={warehouse.id} value={warehouse.id}>{warehouse.name}</option>)}</select></label>
               <label className={labelClass}>Quantity<input required type="number" min="1" max="100" value={stockQuantity} onChange={(event) => setStockQuantity(event.target.value)} className={fieldClass} /></label>
-              <button type="submit" disabled={busy || products.length === 0 || warehouses.length === 0} className="w-fit rounded-lg bg-black px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'Adding…' : 'Add units'}</button>
+              <p className="text-sm text-gray-600">Available here: {warehouseAvailability?.productId === Number(stockProduct) && warehouseAvailability?.warehouseId === Number(stockWarehouse) ? warehouseAvailability.quantity : 'Loading…'}</p>
+              <div className="flex flex-wrap gap-2">
+                <button type="submit" disabled={busy || products.length === 0 || warehouses.length === 0} className="w-fit rounded-lg bg-black px-5 py-2.5 text-sm font-medium text-white hover:bg-gray-800 disabled:cursor-not-allowed disabled:opacity-50">{busy ? 'Saving…' : 'Add units'}</button>
+                <button type="button" onClick={handleRemoveStock} disabled={busy || !warehouseAvailability || warehouseAvailability.productId !== Number(stockProduct) || warehouseAvailability.warehouseId !== Number(stockWarehouse) || Number(stockQuantity) > warehouseAvailability.quantity} className="inline-flex items-center gap-2 rounded-lg border border-red-200 px-4 py-2.5 text-sm font-medium text-red-800 hover:bg-red-50 disabled:cursor-not-allowed disabled:opacity-50"><Minus size={16} aria-hidden="true" />Remove units</button>
+              </div>
             </form>
           </section>
         </div>
+      ) : (
+        <AdminOperations
+          key={activeTab}
+          section={activeTab}
+          categories={categories}
+          products={products}
+          onRefresh={() => setRefreshKey((value) => value + 1)}
+        />
       )}
     </main>
   )

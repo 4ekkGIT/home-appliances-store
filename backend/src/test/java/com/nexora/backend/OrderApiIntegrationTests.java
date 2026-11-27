@@ -28,6 +28,8 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -131,14 +133,115 @@ class OrderApiIntegrationTests {
                             .with(authenticatedAdmin()))
                     .andExpect(status().isConflict());
 
+            Long orderId = jdbcTemplate.queryForObject(
+                    "SELECT id FROM orders WHERE user_id = ? ORDER BY id DESC LIMIT 1", Long.class, customer.getId());
+            mockMvc.perform(put("/api/orders/{id}/status", orderId)
+                            .with(authenticatedAdmin())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"status\":\"CANCELLED\"}"))
+                    .andExpect(status().isOk());
+
             mockMvc.perform(delete("/api/products/{id}", product.getId())
                             .with(authenticatedAdmin()))
                     .andExpect(status().isNoContent());
             org.junit.jupiter.api.Assertions.assertFalse(
                     productRepository.findById(product.getId()).orElseThrow().getActive());
+            mockMvc.perform(delete("/api/products/{id}/permanent", product.getId())
+                            .with(authenticatedAdmin()))
+                    .andExpect(status().isNoContent());
+            org.junit.jupiter.api.Assertions.assertFalse(productRepository.existsById(product.getId()));
+            org.junit.jupiter.api.Assertions.assertEquals(0L,
+                    jdbcTemplate.queryForObject("SELECT count(*) FROM product_units WHERE product_id = ?",
+                            Long.class, product.getId()));
+            org.junit.jupiter.api.Assertions.assertEquals(1L,
+                    jdbcTemplate.queryForObject("SELECT count(*) FROM order_items " +
+                                    "WHERE order_id = ? AND product_id IS NULL AND product_name = ? " +
+                                    "AND quantity = 1 AND unit_price = 10.00",
+                            Long.class, orderId, product.getName()));
             org.junit.jupiter.api.Assertions.assertEquals(1L,
                     jdbcTemplate.queryForObject("SELECT count(*) FROM orders WHERE user_id = ?",
                             Long.class, customer.getId()));
+        } finally {
+            jdbcTemplate.update("DELETE FROM inventory_movements WHERE order_id IN " +
+                    "(SELECT id FROM orders WHERE user_id = ?)", customer.getId());
+            jdbcTemplate.update("DELETE FROM order_item_units WHERE order_item_id IN " +
+                    "(SELECT oi.id FROM order_items oi JOIN orders o ON o.id = oi.order_id WHERE o.user_id = ?)",
+                    customer.getId());
+            jdbcTemplate.update("DELETE FROM order_items WHERE order_id IN " +
+                    "(SELECT id FROM orders WHERE user_id = ?)", customer.getId());
+            jdbcTemplate.update("DELETE FROM orders WHERE user_id = ?", customer.getId());
+            jdbcTemplate.update("DELETE FROM inventory_movements WHERE product_unit_id IN " +
+                    "(SELECT id FROM product_units WHERE product_id = ?)", product.getId());
+            jdbcTemplate.update("DELETE FROM product_units WHERE product_id = ?", product.getId());
+            jdbcTemplate.update("DELETE FROM products WHERE id = ?", product.getId());
+            warehouseRepository.delete(warehouse);
+            categoryRepository.delete(category);
+            userRepository.deleteByEmailIgnoreCase(email);
+        }
+    }
+
+    @Test
+    void adminCanReviewOrdersAndCancelToReleaseReservedStock() throws Exception {
+        String suffix = UUID.randomUUID().toString();
+        String email = "admin-order-" + suffix + "@example.com";
+        StoreUser customer = userRepository.saveAndFlush(new StoreUser(
+                "Admin", "Order", email, passwordEncoder.encode("CheckoutPassword123"),
+                null, StoreUser.Role.CUSTOMER));
+        Category category = categoryRepository.saveAndFlush(new Category(
+                "Admin Order Category " + suffix, "admin-order-category-" + suffix, null));
+        Product product = productRepository.saveAndFlush(new Product(
+                category, null, "Admin Order Product " + suffix, "admin-order-product-" + suffix,
+                null, new BigDecimal("15.00")));
+        Warehouse warehouse = warehouseRepository.saveAndFlush(new Warehouse(
+                "Admin Order Warehouse " + suffix, "Admin order address"));
+        ProductUnit unit = unitRepository.saveAndFlush(new ProductUnit(
+                product, warehouse, "ADMIN-ORDER-" + suffix, null));
+        String orderBody = """
+                {
+                  "items": [{"productId": %d, "quantity": 1}],
+                  "address": {
+                    "contactName": "Test Customer", "email": "%s", "phone": "+1 555 123 4567",
+                    "street": "Main Street", "building": "12", "apartment": "",
+                    "city": "Springfield", "postalCode": "12345", "country": "United States"
+                  }
+                }
+                """.formatted(product.getId(), email);
+
+        try {
+            mockMvc.perform(post("/api/orders")
+                            .with(authenticatedCustomer(email))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(orderBody))
+                    .andExpect(status().isCreated());
+
+            mockMvc.perform(get("/api/orders").with(authenticatedCustomer(email)))
+                    .andExpect(status().isForbidden());
+
+            mockMvc.perform(get("/api/orders").with(authenticatedAdmin()))
+                    .andExpect(status().isOk())
+                    .andExpect(content().string(org.hamcrest.Matchers.containsString(email)));
+
+            Long orderId = jdbcTemplate.queryForObject(
+                    "SELECT id FROM orders WHERE user_id = ? ORDER BY id DESC LIMIT 1", Long.class, customer.getId());
+            mockMvc.perform(put("/api/orders/{id}/status", orderId)
+                            .with(authenticatedAdmin())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"status\":\"DELIVERED\"}"))
+                    .andExpect(status().isBadRequest());
+
+            mockMvc.perform(put("/api/orders/{id}/status", orderId)
+                            .with(authenticatedAdmin())
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("{\"status\":\"CANCELLED\"}"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+            mockMvc.perform(get("/api/inventory/available")
+                            .param("productId", product.getId().toString()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.availableQuantity").value(1));
+            org.junit.jupiter.api.Assertions.assertEquals(ProductUnit.Status.AVAILABLE,
+                    unitRepository.findById(unit.getId()).orElseThrow().getStatus());
         } finally {
             jdbcTemplate.update("DELETE FROM inventory_movements WHERE order_id IN " +
                     "(SELECT id FROM orders WHERE user_id = ?)", customer.getId());

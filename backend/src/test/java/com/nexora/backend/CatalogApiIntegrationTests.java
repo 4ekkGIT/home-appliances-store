@@ -8,6 +8,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.webmvc.test.autoconfigure.AutoConfigureMockMvc;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.mock.web.MockHttpSession;
+import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.http.MediaType;
@@ -18,6 +19,9 @@ import org.springframework.test.web.servlet.MvcResult;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.nio.charset.StandardCharsets;
+import java.awt.image.BufferedImage;
+import java.io.ByteArrayOutputStream;
+import javax.imageio.ImageIO;
 import java.util.Base64;
 import java.util.UUID;
 
@@ -25,9 +29,11 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.security.test.web.servlet.request.SecurityMockMvcRequestPostProcessors.user;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.multipart;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
 @SpringBootTest
@@ -65,14 +71,17 @@ class CatalogApiIntegrationTests {
                 .andExpect(jsonPath("$.imageUrl").value("https://example.com/category.jpg"))
                 .andReturn().getResponse().getContentAsString();
         int categoryId = JsonPath.read(categoryResponse, "$.id");
+        String updatedCategorySuffix = UUID.randomUUID().toString();
+        String updatedCategoryName = "Updated API Category " + updatedCategorySuffix;
+        String updatedCategorySlug = "updated-api-category-" + updatedCategorySuffix;
 
         mockMvc.perform(put("/api/categories/{id}", categoryId)
                         .with(authenticatedAs(adminEmail))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"name":"Updated API Category","slug":"updated-api-category",
+                                {"name":"%s","slug":"%s",
                                  "description":"Updated category","imageUrl":"https://example.com/category-updated.jpg"}
-                                """))
+                                """.formatted(updatedCategoryName, updatedCategorySlug)))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.imageUrl").value("https://example.com/category-updated.jpg"));
 
@@ -120,6 +129,9 @@ class CatalogApiIntegrationTests {
                 .andReturn().getResponse().getContentAsString();
         int productId = JsonPath.read(productResponse, "$.id");
         int imageId = JsonPath.read(productResponse, "$.images[0].id");
+        String updatedProductSuffix = UUID.randomUUID().toString();
+        String updatedProductName = "Updated API Product " + updatedProductSuffix;
+        String updatedProductSlug = "updated-api-product-" + updatedProductSuffix;
 
         String warehouseResponse = mockMvc.perform(get("/api/warehouses"))
                 .andExpect(status().isOk())
@@ -217,15 +229,47 @@ class CatalogApiIntegrationTests {
                         .with(authenticatedAs(adminEmail))
                         .contentType(MediaType.APPLICATION_JSON)
                         .content("""
-                                {"categoryId":%d,"name":"Updated API Product","slug":"updated-api-product",
+                                {"categoryId":%d,"name":"%s","slug":"%s",
                                  "description":"Updated product parameters","price":175,"active":true,
                                  "images":[{"imageUrl":"https://example.com/updated-product.jpg",
                                             "altText":"Updated product","displayOrder":0,"primary":true}]}
-                                """.formatted(categoryId)))
+                                """.formatted(categoryId, updatedProductName, updatedProductSlug)))
                 .andExpect(status().isOk())
-                .andExpect(jsonPath("$.name").value("Updated API Product"))
+                .andExpect(jsonPath("$.name").value(updatedProductName))
                 .andExpect(jsonPath("$.price").value(175))
                 .andExpect(jsonPath("$.images[0].imageUrl").value("https://example.com/updated-product.jpg"));
+
+        byte[] imageBytes;
+        try (ByteArrayOutputStream output = new ByteArrayOutputStream()) {
+            ImageIO.write(new BufferedImage(1, 1, BufferedImage.TYPE_INT_ARGB), "png", output);
+            imageBytes = output.toByteArray();
+        }
+        MockMultipartFile invalidImage = new MockMultipartFile("file", "invalid.png", "image/png",
+                "not an image".getBytes(StandardCharsets.UTF_8));
+        mockMvc.perform(multipart("/api/products/{id}/images/upload", productId)
+                        .file(invalidImage)
+                        .with(authenticatedAs(adminEmail)))
+                .andExpect(status().isBadRequest());
+
+        MockMultipartFile image = new MockMultipartFile("file", "uploaded-product.png", "image/png", imageBytes);
+        String uploadResponse = mockMvc.perform(multipart("/api/products/{id}/images/upload", productId)
+                        .file(image)
+                        .with(authenticatedAs(adminEmail)))
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.primary").value(false))
+                .andReturn().getResponse().getContentAsString();
+        String uploadedImageUrl = JsonPath.read(uploadResponse, "$.imageUrl");
+        int uploadedImageId = JsonPath.read(uploadResponse, "$.id");
+        mockMvc.perform(get(uploadedImageUrl))
+                .andExpect(status().isOk())
+                .andExpect(content().bytes(imageBytes));
+        mockMvc.perform(get("/api/products/{id}/images", productId))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[1].imageUrl").value(uploadedImageUrl));
+        mockMvc.perform(delete("/api/products/{id}/images/{imageId}", productId, uploadedImageId)
+                        .with(authenticatedAs(adminEmail)))
+                .andExpect(status().isNoContent());
+        mockMvc.perform(get(uploadedImageUrl)).andExpect(status().isNotFound());
 
         if (userRepository.findByEmailIgnoreCase(adminEmail).isEmpty()) {
             throw new AssertionError("Admin account disappeared during catalog operations");
@@ -286,6 +330,88 @@ class CatalogApiIntegrationTests {
                                 """))
                 .andExpect(status().isForbidden());
         userRepository.deleteByEmailIgnoreCase(email);
+    }
+
+    @Test
+    void deletingPopulatedCategoryMovesProductsAndRemovesOldAttributeValues() throws Exception {
+        String adminEmail = createUser(StoreUser.Role.ADMIN);
+        Long sourceCategoryId = null;
+        Long replacementCategoryId = null;
+        Long productId = null;
+
+        try {
+            String sourceCategory = mockMvc.perform(post("/api/categories")
+                            .with(authenticatedAs(adminEmail))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"name":"Source category %s","slug":"source-category-%s"}
+                                    """.formatted(UUID.randomUUID(), UUID.randomUUID())))
+                    .andExpect(status().isCreated())
+                    .andReturn().getResponse().getContentAsString();
+            sourceCategoryId = ((Number) JsonPath.read(sourceCategory, "$.id")).longValue();
+
+            String replacementCategory = mockMvc.perform(post("/api/categories")
+                            .with(authenticatedAs(adminEmail))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"name":"Replacement category %s","slug":"replacement-category-%s"}
+                                    """.formatted(UUID.randomUUID(), UUID.randomUUID())))
+                    .andExpect(status().isCreated())
+                    .andReturn().getResponse().getContentAsString();
+            replacementCategoryId = ((Number) JsonPath.read(replacementCategory, "$.id")).longValue();
+
+            String attribute = mockMvc.perform(post("/api/categories/{id}/attributes", sourceCategoryId)
+                            .with(authenticatedAs(adminEmail))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"name":"Color","slug":"color","dataType":"TEXT","options":[],
+                                     "required":false,"filterable":false,"displayOrder":0}
+                                    """))
+                    .andExpect(status().isCreated())
+                    .andReturn().getResponse().getContentAsString();
+            long attributeId = ((Number) JsonPath.read(attribute, "$.id")).longValue();
+
+            String product = mockMvc.perform(post("/api/products")
+                            .with(authenticatedAs(adminEmail))
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"categoryId":%d,"name":"Category move product %s",
+                                     "price":25,"attributes":[{"attributeId":%d,"valueText":"Blue"}]}
+                                    """.formatted(sourceCategoryId, UUID.randomUUID(), attributeId)))
+                    .andExpect(status().isCreated())
+                    .andReturn().getResponse().getContentAsString();
+            productId = ((Number) JsonPath.read(product, "$.id")).longValue();
+
+            mockMvc.perform(delete("/api/categories/{id}", sourceCategoryId)
+                            .with(authenticatedAs(adminEmail)))
+                    .andExpect(status().isConflict());
+
+            mockMvc.perform(delete("/api/categories/{id}", sourceCategoryId)
+                            .param("replacementCategoryId", replacementCategoryId.toString())
+                            .with(authenticatedAs(adminEmail)))
+                    .andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/api/products/{id}", productId))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.categoryId").value(replacementCategoryId))
+                    .andExpect(jsonPath("$.attributes").isEmpty());
+            org.junit.jupiter.api.Assertions.assertEquals(0L,
+                    jdbcTemplate.queryForObject("SELECT count(*) FROM product_attribute_values WHERE product_id = ?",
+                            Long.class, productId));
+        } finally {
+            if (productId != null) {
+                mockMvc.perform(delete("/api/products/{id}/permanent", productId)
+                                .with(authenticatedAs(adminEmail)))
+                        .andExpect(status().isNoContent());
+            }
+            if (sourceCategoryId != null) {
+                jdbcTemplate.update("DELETE FROM categories WHERE id = ?", sourceCategoryId);
+            }
+            if (replacementCategoryId != null) {
+                jdbcTemplate.update("DELETE FROM categories WHERE id = ?", replacementCategoryId);
+            }
+            userRepository.deleteByEmailIgnoreCase(adminEmail);
+        }
     }
 
     @Test

@@ -2,6 +2,11 @@ spring:
   application:
     name: nexora-backend
 
+  servlet:
+    multipart:
+      max-file-size: 10MB
+      max-request-size: 11MB
+
   datasource:
     url: ${DB_URL:jdbc:postgresql://localhost:5432/nexora}
     username: nexora_user
@@ -33,6 +38,7 @@ server:
         same-site: lax
 
 app:
+  image-storage-path: ${IMAGE_STORAGE_PATH:./data/uploads}
   bootstrap-admin:
     email: ${ADMIN_EMAIL:}
     password: ${ADMIN_PASSWORD:}

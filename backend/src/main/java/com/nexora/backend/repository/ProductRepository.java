@@ -25,4 +25,10 @@ public interface ProductRepository extends JpaRepository<Product, Long>, JpaSpec
 
     @Query(value = "SELECT EXISTS (SELECT 1 FROM order_items WHERE product_id = :productId)", nativeQuery = true)
     boolean hasOrderReferences(@Param("productId") Long productId);
+
+    @Query(value = "SELECT EXISTS (SELECT 1 FROM order_items oi " +
+            "JOIN orders o ON o.id = oi.order_id " +
+            "WHERE oi.product_id = :productId " +
+            "AND o.status IN ('PENDING', 'CONFIRMED', 'PROCESSING'))", nativeQuery = true)
+    boolean hasActiveOrderReferences(@Param("productId") Long productId);
 }
