@@ -67,9 +67,14 @@ const Login = () => {
         </div>
 
         {(error || authError) && (
-          <p role="alert" className="text-sm text-red-600">
-            {error || authError}
-          </p>
+          <div role="alert" className="text-sm text-red-600">
+            <p>{error || authError}</p>
+            {(error || authError).toLowerCase().includes('not verified') && (
+              <Link to="/verify-email" className="mt-1 inline-block underline">
+                Resend confirmation email
+              </Link>
+            )}
+          </div>
         )}
 
         <button

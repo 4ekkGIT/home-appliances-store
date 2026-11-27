@@ -35,7 +35,7 @@ class AuthRateLimitFilterTests {
     }
 
     @Test
-    void limitsRegistrationAndResendEndpoints() throws Exception {
+    void rateLimitsEachAuthEndpointIndependently() throws Exception {
         AuthRateLimitFilter filter = new AuthRateLimitFilter(1, Duration.ofMinutes(1));
         AtomicInteger passedRequests = new AtomicInteger();
 
@@ -50,9 +50,16 @@ class AuthRateLimitFilterTests {
         resendRequest.setRemoteAddr("192.0.2.1");
         MockHttpServletResponse resendResponse = new MockHttpServletResponse();
         filter.doFilter(resendRequest, resendResponse, chain);
-        assertEquals(429, resendResponse.getStatus());
+        assertEquals(200, resendResponse.getStatus());
 
-        assertEquals(1, passedRequests.get());
+        MockHttpServletRequest secondResendRequest =
+                new MockHttpServletRequest("POST", "/api/auth/resend-verification");
+        secondResendRequest.setRemoteAddr("192.0.2.1");
+        MockHttpServletResponse secondResendResponse = new MockHttpServletResponse();
+        filter.doFilter(secondResendRequest, secondResendResponse, chain);
+        assertEquals(429, secondResendResponse.getStatus());
+
+        assertEquals(2, passedRequests.get());
     }
 
     private MockHttpServletResponse sendLoginRequest(AuthRateLimitFilter filter, String address,

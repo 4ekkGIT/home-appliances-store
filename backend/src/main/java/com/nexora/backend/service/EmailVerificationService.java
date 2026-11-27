@@ -9,6 +9,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.mail.MailException;
 import org.springframework.mail.SimpleMailMessage;
 import org.springframework.mail.javamail.JavaMailSender;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
@@ -24,10 +26,13 @@ import java.util.Locale;
 
 @Service
 public class EmailVerificationService {
+    private static final Logger logger = LoggerFactory.getLogger(EmailVerificationService.class);
+
     private final EmailVerificationTokenRepository tokenRepository;
     private final StoreUserRepository userRepository;
     private final JavaMailSender mailSender;
     private final String verificationBaseUrl;
+    private final String fromAddress;
     private final long tokenValidityHours;
     private final SecureRandom secureRandom = new SecureRandom();
 
@@ -35,11 +40,13 @@ public class EmailVerificationService {
                                     StoreUserRepository userRepository,
                                     JavaMailSender mailSender,
                                     @Value("${app.email-verification.base-url:http://localhost:5173/verify-email}") String verificationBaseUrl,
+                                    @Value("${app.email-verification.from:no-reply@nexora.local}") String fromAddress,
                                     @Value("${app.email-verification.token-validity-hours:24}") long tokenValidityHours) {
         this.tokenRepository = tokenRepository;
         this.userRepository = userRepository;
         this.mailSender = mailSender;
         this.verificationBaseUrl = verificationBaseUrl;
+        this.fromAddress = fromAddress;
         this.tokenValidityHours = tokenValidityHours;
     }
 
@@ -109,6 +116,7 @@ public class EmailVerificationService {
         String separator = verificationBaseUrl.contains("?") ? "&" : "?";
         String link = verificationBaseUrl + separator + "token=" + rawToken;
         SimpleMailMessage message = new SimpleMailMessage();
+        message.setFrom(fromAddress);
         message.setTo(email);
         message.setSubject("Confirm your Nexora email address");
         message.setText("Confirm your email address by opening this link:\n" + link
@@ -116,7 +124,11 @@ public class EmailVerificationService {
         try {
             mailSender.send(message);
         } catch (MailException exception) {
-            // The account remains unverified and the resend endpoint can retry delivery.
+            logger.error("Failed to send email verification message", exception);
+            throw new ResponseStatusException(
+                    HttpStatus.SERVICE_UNAVAILABLE,
+                    "Could not send verification email. Please try again later.",
+                    exception);
         }
     }
 }

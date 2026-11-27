@@ -54,13 +54,15 @@ public class AuthRateLimitFilter extends OncePerRequestFilter {
                                     FilterChain filterChain) throws ServletException, IOException {
         String contextPath = request.getContextPath();
         String requestPath = request.getRequestURI().substring(contextPath.length());
-        long retryAfterSeconds = recordAttempt("ip:" + request.getRemoteAddr(), System.currentTimeMillis());
+        String endpointKey = requestPath + ":";
+        long retryAfterSeconds = recordAttempt(
+                endpointKey + "ip:" + request.getRemoteAddr(), System.currentTimeMillis());
         if (retryAfterSeconds == 0 && "/api/auth/resend-verification".equals(requestPath)) {
             CachedBodyHttpServletRequest cachedRequest = cacheAndWrapRequest(request);
             String email = getEmail(cachedRequest);
             if (!email.isBlank()) {
                 retryAfterSeconds = recordAttempt(
-                        "email:" + email.toLowerCase(Locale.ROOT), System.currentTimeMillis());
+                        endpointKey + "email:" + email.toLowerCase(Locale.ROOT), System.currentTimeMillis());
             }
             if (retryAfterSeconds == 0) {
                 filterChain.doFilter(cachedRequest, response);

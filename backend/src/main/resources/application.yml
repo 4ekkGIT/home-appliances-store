@@ -38,4 +38,5 @@ app:
     password: ${ADMIN_PASSWORD:}
   email-verification:
     base-url: ${EMAIL_VERIFICATION_BASE_URL:http://localhost:5173/verify-email}
+    from: ${MAIL_FROM:no-reply@nexora.local}
     token-validity-hours: ${EMAIL_VERIFICATION_TOKEN_VALIDITY_HOURS:24}

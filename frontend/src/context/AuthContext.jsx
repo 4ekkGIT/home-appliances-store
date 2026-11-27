@@ -66,6 +66,9 @@ export const AuthProvider = ({ children }) => {
       return currentUser
     } catch (error) {
       if (error.status === 401) {
+        if (error.message !== 'Invalid email or password') {
+          throw new Error(error.message, { cause: error })
+        }
         throw new Error('Invalid email or password', { cause: error })
       }
       if (!error.status) {
