@@ -48,3 +48,15 @@ export function getCategories() {
 export function getBrands() {
   return request('/brands')
 }
+
+export function getAvailableStock(productId) {
+  return request(`/inventory/available?productId=${encodeURIComponent(productId)}`)
+}
+
+export function createOrder(order) {
+  return request('/orders', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(order),
+  })
+}

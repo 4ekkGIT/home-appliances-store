@@ -1,7 +1,8 @@
-import { useEffect, useRef, useState } from 'react'
+import { useContext, useEffect, useRef, useState } from 'react'
 import { Link, NavLink, useNavigate } from 'react-router-dom'
 import { assets } from '../assets/assets.js'
 import { useAuth } from '../context/AuthContext'
+import { ShopContext } from '../context/ShopContext'
 
 const links = [
   { to: '/', label: 'HOME', end: true },
@@ -28,6 +29,7 @@ const Navbar = () => {
   const logoutDialogRef = useRef(null)
   const navigate = useNavigate()
   const { user, logout } = useAuth()
+  const { cartCount } = useContext(ShopContext)
 
   useEffect(() => {
     const dialog = logoutDialogRef.current
@@ -122,7 +124,7 @@ const Navbar = () => {
 
           <Link to="/cart" aria-label="Shopping cart" className="relative">
             <img src={assets.carticon} alt="" className="w-5 min-w-5 transition-transform hover:scale-110" />
-            <span className="absolute -bottom-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-black px-1 text-[9px] leading-none text-white">10</span>
+            <span className="absolute -bottom-1.5 -right-2 flex h-4 min-w-4 items-center justify-center rounded-full bg-black px-1 text-[9px] leading-none text-white">{cartCount}</span>
           </Link>
 
           <button type="button" onClick={() => setVisible(true)} aria-label="Open menu" className="sm:hidden">

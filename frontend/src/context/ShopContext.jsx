@@ -66,9 +66,51 @@ const ShopContextProvider = ({ children }) => {
     }
   })
 
+  const [cartItems, setCartItems] = useState(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('nexora-cart'))
+      return Array.isArray(saved) ? saved : []
+    } catch {
+      return []
+    }
+  })
+
   useEffect(() => {
     localStorage.setItem('nexora-wishlist', JSON.stringify(wishlist))
   }, [wishlist])
+
+  useEffect(() => {
+    localStorage.setItem('nexora-cart', JSON.stringify(cartItems))
+  }, [cartItems])
+
+  const addToCart = (product) => {
+    const id = String(product._id ?? product.id)
+    const itemProduct = { ...product, _id: id }
+    setCartItems((previous) => {
+      const existing = previous.find((item) => item.product._id === id)
+      return existing
+        ? previous.map((item) => item.product._id === id
+          ? { ...item, quantity: item.quantity + 1 }
+          : item)
+        : [...previous, { product: itemProduct, quantity: 1 }]
+    })
+  }
+
+  const removeFromCart = (productId) => {
+    setCartItems((previous) => previous.filter((item) => item.product._id !== String(productId)))
+  }
+
+  const updateCartQuantity = (productId, quantity) => {
+    const normalizedQuantity = Math.max(1, Math.floor(Number(quantity) || 1))
+    setCartItems((previous) => previous.map((item) => item.product._id === String(productId)
+      ? { ...item, quantity: normalizedQuantity }
+      : item))
+  }
+
+  const clearCart = () => setCartItems([])
+  const cartCount = cartItems.reduce((sum, item) => sum + item.quantity, 0)
+  const subtotal = cartItems.reduce((sum, item) => sum + Number(item.product.price) * item.quantity, 0)
+  const total = subtotal + (cartItems.length ? delivery_fee : 0)
 
   const addToWishlist = (productId) => {
     setWishlist((previous) =>
@@ -107,6 +149,14 @@ const ShopContextProvider = ({ children }) => {
     loadCatalog,
     currency,
     delivery_fee,
+    cartItems,
+    cartCount,
+    subtotal,
+    total,
+    addToCart,
+    removeFromCart,
+    updateCartQuantity,
+    clearCart,
     wishlist,
     addToWishlist,
     removeFromWishlist,

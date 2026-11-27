@@ -5,9 +5,10 @@ import { ShopContext } from '../context/ShopContext'
 
 const ProductDetails = () => {
   const { productId } = useParams()
-  const { currency, toggleWishlist, isWishlisted } = useContext(ShopContext)
+  const { currency, toggleWishlist, isWishlisted, addToCart } = useContext(ShopContext)
   const [loadedProduct, setLoadedProduct] = useState({ id: null, product: null, error: '' })
   const [activeImage, setActiveImage] = useState(0)
+  const [cartMessage, setCartMessage] = useState('')
 
   useEffect(() => {
     let active = true
@@ -111,6 +112,18 @@ const ProductDetails = () => {
             ))}
           </dl>
         )}
+
+        <button
+          type="button"
+          onClick={() => {
+            addToCart(product)
+            setCartMessage('Added to your cart')
+          }}
+          className="mt-8 flex w-full items-center justify-center rounded-lg bg-black px-6 py-3 text-sm font-medium text-white transition hover:bg-gray-800 sm:w-auto"
+        >
+          Add to cart
+        </button>
+        {cartMessage && <p role="status" className="mt-2 text-sm text-green-700">{cartMessage}</p>}
 
         <button
           type="button"
