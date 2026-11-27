@@ -20,6 +20,18 @@ export function registerUser(data) {
   })
 }
 
+export function verifyEmail(token) {
+  return request(`/auth/verify-email?token=${encodeURIComponent(token)}`)
+}
+
+export function resendVerificationEmail(email) {
+  return request('/auth/resend-verification', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email }),
+  })
+}
+
 export function logoutUser() {
   return request('/auth/logout', { method: 'POST' })
 }

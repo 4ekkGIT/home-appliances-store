@@ -90,6 +90,16 @@ class InventoryApiIntegrationTests {
         );
 
         try {
+            mockMvc.perform(get("/api/inventory/units"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$").isArray());
+            mockMvc.perform(get("/api/warehouses"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$").isArray());
+            mockMvc.perform(get("/api/warehouses/{id}", source.getId()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.id").value(source.getId()));
+
             String registerResponse = mockMvc.perform(post("/api/inventory/units")
                             .with(authenticatedAs(adminEmail))
                             .contentType(MediaType.APPLICATION_JSON)

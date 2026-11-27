@@ -43,6 +43,9 @@ public class StoreUser {
     @Column(name = "is_active", nullable = false)
     private boolean active = true;
 
+    @Column(name = "email_verified", nullable = false)
+    private boolean emailVerified = false;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private OffsetDateTime createdAt;
 
@@ -57,6 +60,7 @@ public class StoreUser {
         this.passwordHash = passwordHash;
         this.phone = phone;
         this.role = role;
+        this.emailVerified = role == Role.ADMIN;
     }
 
     public void changePassword(String encodedPassword) {
@@ -65,6 +69,10 @@ public class StoreUser {
 
     public void deactivate() {
         this.active = false;
+    }
+
+    public void verifyEmail() {
+        this.emailVerified = true;
     }
 
     @jakarta.persistence.PrePersist

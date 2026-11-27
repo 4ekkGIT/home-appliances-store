@@ -15,6 +15,7 @@ import Wishlist from './pages/Wishlist'
 import Register from './pages/Register'
 import ProtectedRoute from './components/ProtectedRoute'
 import ForgotPassword from './pages/ForgotPassword'
+import VerifyEmail from './pages/VerifyEmail'
 
 const App = () => {
   return (
@@ -41,6 +42,7 @@ const App = () => {
           <Route path="/wishlist" element={<Wishlist />} />
           <Route path="/register" element={<Register />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />  
+          <Route path="/verify-email" element={<VerifyEmail />} />
         </Routes>
 
         <Footer />

@@ -24,7 +24,8 @@ public class StoreUserDetailsService implements UserDetailsService {
         return User.withUsername(user.getEmail())
                 .password(user.getPasswordHash())
                 .roles(user.getRole().name())
-                .disabled(!user.isActive())
+                .disabled(!user.isActive()
+                        || (!user.isEmailVerified() && user.getRole() == com.nexora.backend.entity.StoreUser.Role.CUSTOMER))
                 .build();
     }
 }

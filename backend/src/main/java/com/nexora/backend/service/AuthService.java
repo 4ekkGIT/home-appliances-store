@@ -17,10 +17,13 @@ import java.util.Locale;
 public class AuthService {
     private final StoreUserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final EmailVerificationService emailVerificationService;
 
-    public AuthService(StoreUserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AuthService(StoreUserRepository userRepository, PasswordEncoder passwordEncoder,
+                       EmailVerificationService emailVerificationService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.emailVerificationService = emailVerificationService;
     }
 
     @Transactional
@@ -35,7 +38,9 @@ public class AuthService {
         StoreUser user = new StoreUser(request.firstName().trim(), trimToNull(request.lastName()),
                 email, passwordEncoder.encode(request.password()), trimToNull(request.phone()),
                 StoreUser.Role.CUSTOMER);
-        return UserResponse.from(userRepository.save(user));
+        StoreUser savedUser = userRepository.save(user);
+        emailVerificationService.issueToken(savedUser);
+        return UserResponse.from(savedUser);
     }
 
     @Transactional
@@ -49,6 +54,7 @@ public class AuthService {
             if (existing.get().getRole() != StoreUser.Role.ADMIN) {
                 throw new IllegalStateException("Bootstrap admin email belongs to a non-admin user");
             }
+            existing.get().verifyEmail();
             return;
         }
         userRepository.save(new StoreUser("Administrator", null, normalizedEmail,

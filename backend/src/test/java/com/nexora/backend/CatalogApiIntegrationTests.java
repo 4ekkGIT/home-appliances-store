@@ -456,8 +456,12 @@ class CatalogApiIntegrationTests {
 
     private String createUser(StoreUser.Role role) {
         String email = role.name().toLowerCase() + "-" + UUID.randomUUID() + "@example.com";
-        userRepository.saveAndFlush(new StoreUser("Test", null, email,
-                passwordEncoder.encode(PASSWORD), null, role));
+        StoreUser user = new StoreUser("Test", null, email,
+                passwordEncoder.encode(PASSWORD), null, role);
+        if (role == StoreUser.Role.CUSTOMER) {
+            user.verifyEmail();
+        }
+        userRepository.saveAndFlush(user);
         return email;
     }
 

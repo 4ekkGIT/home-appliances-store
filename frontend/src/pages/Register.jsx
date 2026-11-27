@@ -8,7 +8,7 @@ import { useAuth } from '../context/AuthContext'
 const MIN_PASSWORD_LENGTH = 8
 
 const Register = () => {
-  const { register, login, user, isLoading } = useAuth()
+  const { register, user, isLoading } = useAuth()
   const navigate = useNavigate()
   const [formData, setFormData] = useState({
     firstName: '',
@@ -18,6 +18,7 @@ const Register = () => {
   })
   const [error, setError] = useState('')
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [registrationComplete, setRegistrationComplete] = useState(false)
 
   useEffect(() => {
     if (!isLoading && user) {
@@ -63,13 +64,7 @@ const Register = () => {
     setIsSubmitting(true)
     try {
       await register(payload)
-
-      // Аккаунт создан: входим автоматически, редирект сделает useEffect
-      try {
-        await login(payload.email, payload.password)
-      } catch {
-        navigate('/login', { replace: true })
-      }
+      setRegistrationComplete(true)
     } catch (registerError) {
       setError(registerError.message)
     } finally {
@@ -82,6 +77,19 @@ const Register = () => {
       title="Create Account"
       subtitle="Join Nexora and discover our products"
     >
+      {registrationComplete ? (
+        <div className="text-center">
+          <p className="text-sm text-gray-700">
+            Проверьте почту. Мы отправили ссылку для подтверждения адреса.
+          </p>
+          <Link
+            to="/verify-email"
+            className="mt-5 block w-full bg-black text-white py-3 rounded-md text-sm"
+          >
+            Resend or enter verification
+          </Link>
+        </div>
+      ) : (
       <form onSubmit={handleSubmit} className="flex flex-col gap-5">
         <AuthInput
           label="First Name"
@@ -133,6 +141,7 @@ const Register = () => {
           {isSubmitting ? 'Creating Account...' : 'Create Account'}
         </button>
       </form>
+      )}
 
       <p className="text-center text-sm text-gray-500 mt-6">
         Already have an account?{' '}
