@@ -235,12 +235,23 @@ export function registerInventoryUnit(unit) {
   })
 }
 
-export function createOrder(order) {
+export function createOrder(order, idempotencyKey) {
   return request('/orders', {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: {
+      'Content-Type': 'application/json',
+      ...(idempotencyKey ? { 'Idempotency-Key': idempotencyKey } : {}),
+    },
     body: JSON.stringify(order),
   })
+}
+
+export function getMyOrders() {
+  return request('/orders/my')
+}
+
+export function cancelMyOrder(id) {
+  return request(`/orders/${encodeURIComponent(id)}/cancel`, { method: 'POST' })
 }
 
 export function getAdminOrders() {

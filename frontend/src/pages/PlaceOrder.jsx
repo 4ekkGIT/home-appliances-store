@@ -12,6 +12,11 @@ const PlaceOrder = () => {
   const [isSubmitting, setIsSubmitting] = useState(false)
   const [error, setError] = useState('')
   const [completedOrder, setCompletedOrder] = useState(null)
+  const [idempotencyKey] = useState(() => (
+    typeof crypto !== 'undefined' && crypto.randomUUID
+      ? crypto.randomUUID()
+      : `order-${Date.now()}-${Math.random().toString(16).slice(2)}`
+  ))
 
   if (cartItems.length === 0 && !completedOrder) return <Navigate to="/cart" replace />
 
@@ -35,7 +40,7 @@ const PlaceOrder = () => {
           postalCode: values.postalCode.trim(),
           country: values.country.trim(),
         },
-      })
+      }, idempotencyKey)
       setCompletedOrder(order)
       clearCart()
     } catch (requestError) {
@@ -48,9 +53,10 @@ const PlaceOrder = () => {
   if (completedOrder) {
     return (
       <main className="mx-auto max-w-2xl py-16 text-center sm:py-24">
-        <p className="text-sm font-semibold uppercase text-green-700">Order confirmed</p>
+        <p className="text-sm font-semibold uppercase text-green-700">Order accepted</p>
         <h1 className="mt-3 text-3xl font-semibold text-gray-950">Thank you for your order</h1>
-        <p className="mt-3 text-sm text-gray-600">Order #{completedOrder.orderId} has been placed.</p>
+        <p className="mt-3 text-sm text-gray-600">Order #{completedOrder.orderId} has been accepted.</p>
+        <p className="mt-2 text-sm text-gray-600">Payment method: cash on delivery. We will contact you to confirm delivery.</p>
         <p className="mt-5 text-lg font-semibold text-gray-950">{Number(completedOrder.total).toFixed(2)} {currency}</p>
         <Link to="/catalog" className="mt-7 inline-flex rounded-lg bg-black px-5 py-3 text-sm font-medium text-white hover:bg-gray-800">Continue shopping</Link>
       </main>

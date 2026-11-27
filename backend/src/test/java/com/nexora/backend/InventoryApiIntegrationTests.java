@@ -90,13 +90,14 @@ class InventoryApiIntegrationTests {
         );
 
         try {
-            mockMvc.perform(get("/api/inventory/units"))
+            mockMvc.perform(get("/api/inventory/units").with(authenticatedAs(adminEmail)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$").isArray());
-            mockMvc.perform(get("/api/warehouses"))
+            mockMvc.perform(get("/api/warehouses").with(authenticatedAs(adminEmail)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$").isArray());
-            mockMvc.perform(get("/api/warehouses/{id}", source.getId()))
+            mockMvc.perform(get("/api/warehouses/{id}", source.getId())
+                            .with(authenticatedAs(adminEmail)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$.id").value(source.getId()));
 
@@ -170,7 +171,8 @@ class InventoryApiIntegrationTests {
                                     """.formatted(source.getId())))
                     .andExpect(status().isBadRequest());
 
-            mockMvc.perform(get("/api/inventory/units/{id}/movements", unitId))
+            mockMvc.perform(get("/api/inventory/units/{id}/movements", unitId)
+                            .with(authenticatedAs(adminEmail)))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$").isArray());
 

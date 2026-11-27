@@ -133,7 +133,8 @@ class CatalogApiIntegrationTests {
         String updatedProductName = "Updated API Product " + updatedProductSuffix;
         String updatedProductSlug = "updated-api-product-" + updatedProductSuffix;
 
-        String warehouseResponse = mockMvc.perform(get("/api/warehouses"))
+        String warehouseResponse = mockMvc.perform(get("/api/warehouses")
+                        .with(authenticatedAs(adminEmail)))
                 .andExpect(status().isOk())
                 .andReturn().getResponse().getContentAsString();
         int warehouseId = JsonPath.read(warehouseResponse, "$[0].id");

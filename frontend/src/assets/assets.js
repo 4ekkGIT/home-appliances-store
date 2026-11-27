@@ -37,18 +37,6 @@ import iphone18_2 from '../assets/iphone18(2).webp'
 import iphone17_1 from '../assets/iphone17(1).webp'
 import iphone17_2 from '../assets/iphone17(2).webp'
 import iphone17_3 from '../assets/iphone17(3).webp'
-import airpods4_1 from '../assets/Airpods4_1.webp'
-import airpods4_2 from '../assets/Airpods4_2.webp'
-import airpods4_3 from '../assets/Airpods4_3.webp'
-import LGwashingmachine_1 from '../assets/LGwashingmachine_1.webp'
-import LGwashingmachine_2 from '../assets/LGwashingmachine_2.webp'
-import LGwashingmachine_3 from '../assets/LGwashingmachine_3.webp'
-import SamsungVacuumCleaner_1 from '../assets/SamsungVacuumCleaner_1.webp'
-import SamsungVacuumCleaner_2 from '../assets/SamsungVacuumCleaner_2.webp'
-import SamsungVacuumCleaner_3 from '../assets/SamsungVacuumCleaner_3.webp'
-import Samsungtv1 from '../assets/Samsungtv1.webp'
-import Samsungtv2 from '../assets/Samsungtv2.webp'
-import Samsungtv3 from '../assets/Samsungtv3.webp'
 
 
 

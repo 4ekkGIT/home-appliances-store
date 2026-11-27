@@ -7,5 +7,6 @@ public record CheckoutResponse(
         String status,
         BigDecimal subtotal,
         BigDecimal deliveryFee,
-        BigDecimal total
+        BigDecimal total,
+        String paymentMethod
 ) {}

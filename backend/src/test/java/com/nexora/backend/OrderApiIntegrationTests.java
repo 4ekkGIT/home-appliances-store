@@ -256,4 +256,86 @@ class OrderApiIntegrationTests {
             userRepository.deleteByEmailIgnoreCase(email);
         }
     }
+
+    @Test
+    void customerCanListAndCancelAnIdempotentOrder() throws Exception {
+        String suffix = UUID.randomUUID().toString();
+        String email = "customer-order-" + suffix + "@example.com";
+        StoreUser customer = userRepository.saveAndFlush(new StoreUser(
+                "Customer", "Orders", email, passwordEncoder.encode("CheckoutPassword123"),
+                null, StoreUser.Role.CUSTOMER));
+        Category category = categoryRepository.saveAndFlush(new Category(
+                "Customer Order Category " + suffix, "customer-order-category-" + suffix, null));
+        Product product = productRepository.saveAndFlush(new Product(
+                category, null, "Customer Order Product " + suffix, "customer-order-product-" + suffix,
+                null, new BigDecimal("25.00")));
+        Warehouse warehouse = warehouseRepository.saveAndFlush(new Warehouse(
+                "Customer Order Warehouse " + suffix, "Customer order address"));
+        ProductUnit unit = unitRepository.saveAndFlush(new ProductUnit(
+                product, warehouse, "CUSTOMER-ORDER-" + suffix, null));
+        String orderBody = """
+                {
+                  "items": [{"productId": %d, "quantity": 1}],
+                  "address": {
+                    "contactName": "Test Customer", "email": "%s", "phone": "+1 555 123 4567",
+                    "street": "Main Street", "building": "12", "apartment": "",
+                    "city": "Springfield", "postalCode": "12345", "country": "United States"
+                  }
+                }
+                """.formatted(product.getId(), email);
+
+        try {
+            String idempotencyKey = "checkout-" + suffix;
+            String firstResponse = mockMvc.perform(post("/api/orders")
+                            .with(authenticatedCustomer(email))
+                            .header("Idempotency-Key", idempotencyKey)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(orderBody))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.paymentMethod").value("CASH_ON_DELIVERY"))
+                    .andReturn().getResponse().getContentAsString();
+            Long orderId = Long.parseLong(firstResponse.replaceAll(".*\\\"orderId\\\":([0-9]+).*", "$1"));
+
+            mockMvc.perform(post("/api/orders")
+                            .with(authenticatedCustomer(email))
+                            .header("Idempotency-Key", idempotencyKey)
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content(orderBody))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.orderId").value(orderId));
+
+            mockMvc.perform(get("/api/orders/my").with(authenticatedCustomer(email)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].id").value(orderId))
+                    .andExpect(jsonPath("$[0].status").value("PENDING"));
+
+            mockMvc.perform(post("/api/orders/{id}/cancel", orderId)
+                            .with(authenticatedCustomer(email)))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.status").value("CANCELLED"));
+
+            mockMvc.perform(get("/api/inventory/available")
+                            .param("productId", product.getId().toString()))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.availableQuantity").value(1));
+            org.junit.jupiter.api.Assertions.assertEquals(ProductUnit.Status.AVAILABLE,
+                    unitRepository.findById(unit.getId()).orElseThrow().getStatus());
+        } finally {
+            jdbcTemplate.update("DELETE FROM inventory_movements WHERE order_id IN " +
+                    "(SELECT id FROM orders WHERE user_id = ?)", customer.getId());
+            jdbcTemplate.update("DELETE FROM order_item_units WHERE order_item_id IN " +
+                    "(SELECT oi.id FROM order_items oi JOIN orders o ON o.id = oi.order_id WHERE o.user_id = ?)",
+                    customer.getId());
+            jdbcTemplate.update("DELETE FROM order_items WHERE order_id IN " +
+                    "(SELECT id FROM orders WHERE user_id = ?)", customer.getId());
+            jdbcTemplate.update("DELETE FROM orders WHERE user_id = ?", customer.getId());
+            jdbcTemplate.update("DELETE FROM inventory_movements WHERE product_unit_id IN " +
+                    "(SELECT id FROM product_units WHERE product_id = ?)", product.getId());
+            unitRepository.delete(unit);
+            productRepository.delete(product);
+            warehouseRepository.delete(warehouse);
+            categoryRepository.delete(category);
+            userRepository.deleteByEmailIgnoreCase(email);
+        }
+    }
 }

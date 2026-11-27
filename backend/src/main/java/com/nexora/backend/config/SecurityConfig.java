@@ -68,6 +68,8 @@ public class SecurityConfig {
 
                         // Orders
                         .requestMatchers(HttpMethod.POST, "/api/orders").authenticated()
+                        .requestMatchers(HttpMethod.GET, "/api/orders/my").authenticated()
+                        .requestMatchers(HttpMethod.POST, "/api/orders/*/cancel").authenticated()
                         .requestMatchers(HttpMethod.GET, "/api/orders").hasRole("ADMIN")
 
                         // Public inventory endpoint

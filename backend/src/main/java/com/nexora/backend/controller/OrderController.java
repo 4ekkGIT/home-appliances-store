@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestHeader;
 import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 
@@ -31,8 +32,19 @@ public class OrderController {
     @PostMapping
     @ResponseStatus(HttpStatus.CREATED)
     public CheckoutResponse create(@Valid @RequestBody CheckoutRequest request,
-                                   Authentication authentication) {
-        return orderService.create(request, authentication.getName());
+                                   Authentication authentication,
+                                   @RequestHeader(value = "Idempotency-Key", required = false) String idempotencyKey) {
+        return orderService.create(request, authentication.getName(), idempotencyKey);
+    }
+
+    @GetMapping("/my")
+    public List<AdminOrderResponse> findMyOrders(Authentication authentication) {
+        return orderService.findForCustomer(authentication.getName());
+    }
+
+    @PostMapping("/{id}/cancel")
+    public AdminOrderResponse cancelOwnOrder(@PathVariable Long id, Authentication authentication) {
+        return orderService.cancelByCustomer(id, authentication.getName());
     }
 
     @GetMapping
